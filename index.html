@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>repl.it</title>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body>
+    <script src="script.js"></script>
+    <table>
+      <tr>
+        <td>Rent</td>
+        <td><input name="rent" value=800></td>
+      </tr>
+      <tr>
+        <td>Price</td>
+        <td><input name="price" value=40></td>
+        <td>(in thousands)</td>
+      </tr>
+    </table>
+    <br />
+    <button onclick="calculate()">Calculate</button>
+    <br />
+    <div name="output">&nbsp;</div>
+    <br />
+    <hr />
+    <br />
+    <table>
+      <tr>
+        <td>Monthly Expense</td>
+        <td><input name="expense" value=400></td>
+      </tr>
+      <tr>
+        <td>Closing Cost</td>
+        <td><input name="closing" value=2></td>
+        <td>(in thousands)</td>
+      </tr>
+      <tr>
+        <td>Interest Rate</td>
+        <td><input name="rate" value=4.5></td>
+        <td>(in percent; over estimating OK)</td>
+      </tr>
+    </table>
+  </body>
+</html>
