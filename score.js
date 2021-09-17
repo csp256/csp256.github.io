@@ -20,11 +20,6 @@ function calculate() {
   var denominator = price + closing
   var offset = rate;
 
-  console.log(numerator);
-  console.log(denominator);
-  console.log(rate);
-  
-
   var score = round( numerator / denominator - offset, 1 );
   console.log(score);
 
