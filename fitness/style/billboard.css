@@ -7,6 +7,8 @@
  *
  * @version 3.8.0
  */
+
+
 /*-- Chart --*/
 .bb svg {
   font: 10px sans-serif;
@@ -14,7 +16,7 @@
 
 .bb path, .bb line {
   fill: none;
-  stroke: #000; }
+  stroke: #0FF; } /* border around plot */
 
 .bb text, .bb .bb-button {
   -webkit-user-select: none;
@@ -45,13 +47,19 @@
 
 /*-- Axis --*/
 .bb-axis {
-  shape-rendering: crispEdges; }
+  shape-rendering: crispEdges; 
+}
+
+.tick {
+  font-size: 14px;
+  fill: rgb(95 180 180);
+}
 
 /*-- Grid --*/
 .bb-grid {
   pointer-events: none; }
   .bb-grid line {
-    stroke: #aaa; }
+    stroke: rgb(236 95 102); } /* dashed grid lines */
   .bb-grid text {
     fill: #aaa; }
 
@@ -115,8 +123,10 @@
 
 /*-- Legend --*/
 .bb-legend-item {
-  font-size: 12px;
-  user-select: none; }
+  font-size: 16px;
+  user-select: none; 
+  fill: rgb(153 199 148);
+}
 
 .bb-legend-item-hidden {
   opacity: 0.15; }
@@ -129,7 +139,15 @@
 
 /*-- Title --*/
 .bb-title {
-  font: 14px sans-serif; }
+  font: 18px sans-serif; 
+  fill: rgb(249 174 88);
+
+}
+
+
+#multilinedTitle .bb-title tspan:first-child { 
+  font-size: 17px; 
+  font-weight: bold; }
 
 /*-- Treemap --*/
 .bb-chart-treemaps rect {
@@ -144,16 +162,16 @@
 .bb-tooltip {
   border-collapse: collapse;
   border-spacing: 0;
-  background-color: #fff;
+  background-color: #rgb(95 180 180);
   empty-cells: show;
   opacity: 0.9;
   -webkit-box-shadow: 7px 7px 12px -9px #777777;
   -moz-box-shadow: 7px 7px 12px -9px #777777;
   box-shadow: 7px 7px 12px -9px #777777; }
   .bb-tooltip tr {
-    border: 1px solid #CCC; }
+    border: 1px solid rgb(248 123 88); }
   .bb-tooltip th {
-    background-color: #aaa;
+    background-color: #888;
     font-size: 14px;
     padding: 2px 5px;
     text-align: left;
@@ -161,7 +179,7 @@
   .bb-tooltip td {
     font-size: 13px;
     padding: 3px 6px;
-    background-color: #fff;
+    background-color: rgb(48, 56, 65);
     border-left: 1px dotted #999; }
     .bb-tooltip td > span, .bb-tooltip td > svg {
       display: inline-block;
@@ -232,8 +250,8 @@ text.bb-chart-arcs-gauge-title {
   right: 10px; }
   .bb-button .bb-zoom-reset {
     font-size: 11px;
-    border: solid 1px #ccc;
-    background-color: #fff;
+    border: solid 1px rgb(95 180 180); /* reset zoom button */
+    background-color: rgb(95 180 180);
     padding: 5px;
     border-radius: 5px;
     cursor: pointer; }
