@@ -213,7 +213,7 @@ function compute_derived(raw_data) {
     data["Cumulative Deficit [C]"] = cumsum(data["Deficit [C]"]);
     data["Expected Weight Loss [lbs]"] = [];
     for (let i = 0; i < len; i++) {
-        data["Expected Weight Loss [lbs]"].push(data["Cumulative Deficit [C]"][i] / -3500);
+        data["Expected Weight Loss [lbs]"].push(data["Cumulative Deficit [C]"][i] / -3500.0);
     }
     add_sma(data, "Expected Weight Loss [lbs]");
     data["Observed Weight Loss [lbs]"] = [];
@@ -240,7 +240,7 @@ function compute_derived(raw_data) {
 </script>
 
 <div class="markdown">
-I'm a 6'4", 36 year old male who started trying to get in shape on Feb 11th 2023. 
+I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023. 
 
 Click on the headers to collapse them.
 </div>
@@ -626,12 +626,11 @@ function main() {
                     max:arrayMax(data["Resting Energy [C]"]),
                     min:arrayMin(data["Resting Energy [C]"])
                 });
-
             }
 
             { // Analysis
                 var comparison = plot_obj_observed_v_expected(data);
-                bb.generate(comparison)
+                bb.generate(comparison);
 
                 var anomalous = plot_obj(data, "Anomalous Weight Loss [lbs]");
                 bb.generate(anomalous);
