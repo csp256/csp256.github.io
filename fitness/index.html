@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Fitness</title>
+    <link rel="icon" type="image/x-icon" href="img/icons8-weightlifting-arcade-96.png">
+
+    <meta http-equiv='cache-control' content='no-cache'> 
+    <meta http-equiv='expires' content='0'> 
+    <meta http-equiv='pragma' content='no-cache'>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <script src="lib/papaparse.js"></script>
+    <script src="lib/d3.min.js"></script>
+    <script src="lib/billboard.js"></script>
+    <script src="lib/showdown.js"></script>
+
+    <link rel="stylesheet" href="style/billboard.css">
+
+    <style>
+        /* Style the button that is used to open and close the collapsible content */
+        .collapsible {
+            background-color: #ccc;
+            color: #444;
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 15px;
+        }
+
+        /* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+        /*.active, */.collapsible:hover {
+            background-color: #aaa;
+        }
+
+        /* Style the collapsible content.  */
+        .content {
+            padding: 0 18px;
+            overflow: hidden;
+            background-color: #f1f1f1;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">   
+const short_month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function to_ascii(s) {
+    return s.replaceAll("[^\\p{ASCII}]");
+}
+
+function to_id_name(s) {
+    return s
+        .replaceAll(/ /g, "_") // replace space with _
+        .replace(/[\])}[{(]/g, ""); // remove brackets, parens, braces
+}
+
+// Note this function will "snap" to new values if SMA is 0
+function simpleMovingAverage(input, interval) {
+    const length = input.length;
+    let output = [];
+    let i = 0;
+    let sum = 0;
+
+    let snap = 0; // typically, index of first non-trivial value
+    while (i < interval && i < length) {
+        if (sum == 0) {
+            sum = input[i];
+            snap = 0;
+        } else {
+            sum += input[i];
+        }
+        i++;
+        output.push(sum / (i - snap));
+    }
+
+    while (interval <= i && i < length) {
+        if (sum == 0) {
+            sum = input[i];
+            snap = i;
+            output.push( sum );
+        } else {
+            if (i - interval < snap) {
+                // still warming up
+                sum += input[i];
+                output.push(sum / (1 + (i - snap)));
+            } else {
+                // nominal case
+                sum += input[i] - input[i - interval];
+                output.push(sum / interval);
+            }
+        }
+        i++;
+    }
+
+    return output;
+}
+
+// Specialized for the results from PapaParser
+function transpose(results) {
+    let output = {};
+    let fields = results.data[0].length;
+    // Probably a more JS way of doing this but yolo
+    for (var field_id = 0; field_id < fields; field_id++) {
+        output[results.data[0][field_id]] = [];
+        // Date is special, handle it differently
+        if ("Date" === results.data[0][field_id]) {
+            for (var i = 1; i < results.data.length; i++) {
+                // This setYear hack will need updating :)
+                output[results.data[0][field_id]].push(new Date(results.data[i][field_id]).setYear(2023));
+            }
+        } else {
+            for (var i = 1; i < results.data.length; i++) {
+                const datum = parseFloat(
+                    // Must remove all commas from string before parsing...
+                    results.data[i][field_id].replace(/\,/g, "")
+                );
+                output[results.data[0][field_id]].push(
+                    // Replaces NaN with 0
+                    datum ? datum : 0
+                );
+            }
+        }
+    }
+
+    for (field of ["Active Energy [C]", "Resting Energy [C]"]) {
+        for (var i = 0; i < output[field].length; i++) {
+            output[field][i] = -output[field][i];
+        }
+    }
+
+    return output;
+}
+
+// Makes the buttons collapse next element when clicked
+function collapsible() {
+    var coll = document.getElementsByClassName("collapsible");
+    for (var i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function () {
+            this.classList.toggle("active");
+            var content = this.nextElementSibling;
+            if (content.style.display === "none") {
+                content.style.display = "block";
+            } else {
+                content.style.display = "none";
+            }
+        });
+    }
+}
+
+// Converts "markdown" divs to proper HTML; purely for my convenience
+function markdown() {
+    var converter = new showdown.Converter();
+    converter.setOption('ellipsis', false); // do not replace "..." with unicode!
+    for (div of document.getElementsByClassName("markdown")) {
+        div.innerHTML = converter.makeHtml(div.innerHTML);
+    }
+}
+
+function arrayMax(array) { return array.reduce(function(a, b) { return Math.max(a, b); }); }
+function arrayMin(array) { return array.reduce(function(a, b) { return Math.min(a, b); }); }
+
+function hadamard_sum(array) {
+    const num_arrays = array.length;
+    const len = array[0].length;
+    let output = [...array[0]];
+    for (let array_index = 1; array_index < num_arrays; array_index++) {
+        for (let idx = 0; idx < len; idx++) {
+            output[idx] += array[array_index][idx];
+        }
+    }
+    return output;
+}
+
+Array.prototype.SumArray = function (arr) {
+    var sum = this.map(function (num, idx) {
+        return num + arr[idx];
+    });
+    return sum;
+}
+
+function cumsum(x) { return x.map((sum = 0, n => sum += n)); }
+
+function daily_delta(x) {
+    var out = [0];
+    for (var i = 1; i < x.length; i++) {
+        out.push(x[i] - x[i-1]);
+    }
+    return out;
+}
+
+function add_sma(data, field, smoothing = 7) {
+    data[field + " (SMA)"] = simpleMovingAverage(data[field], smoothing);
+}
+
+// All the fields which are functions of the raw data are added here. 
+function compute_derived(raw_data) {
+    const len = raw_data["Date"].length;
+    var data = raw_data;
+    data["Deficit [C]"] = hadamard_sum([
+        raw_data["Resting Energy [C]"], 
+        raw_data["Active Energy [C]"], 
+        raw_data["Food Energy [C]"]
+    ]);
+    data["Active Weight Loss [lbs]"] = [];
+    for (let i = 0; i < len; i++) {
+        data["Active Weight Loss [lbs]"].push( data["Active Energy [C]"][i] / -3500.0);
+    }
+    data["Cumulative Deficit [C]"] = cumsum(data["Deficit [C]"]);
+    data["Expected Weight Loss [lbs]"] = [];
+    for (let i = 0; i < len; i++) {
+        data["Expected Weight Loss [lbs]"].push(data["Cumulative Deficit [C]"][i] / -3500);
+    }
+    add_sma(data, "Expected Weight Loss [lbs]");
+    data["Observed Weight Loss [lbs]"] = [];
+    for (let i = 0; i < len; i++) {
+        data["Observed Weight Loss [lbs]"].push(data["Weight [lbs]"][0] - data["Weight [lbs]"][i]);
+    }
+    add_sma(data, "Observed Weight Loss [lbs]");
+    data["Anomalous Weight Loss [lbs]"] = [];
+    for (let i = 0; i < len; i++) {
+        data["Anomalous Weight Loss [lbs]"].push(data["Observed Weight Loss [lbs]"][i] - data["Expected Weight Loss [lbs]"][i]);
+    }
+    add_sma(data, "Anomalous Weight Loss [lbs]");
+    data["Weekly Delta of Weight [lbs]"] = [];
+    for (let i = 0; i < 7; i++) {
+        data["Weekly Delta of Weight [lbs]"].push(data["Weight [lbs]"][0] - data["Weight [lbs]"][i]);
+    }
+    for (let i = 7; i < len; i++) {
+        data["Weekly Delta of Weight [lbs]"].push(data["Weight [lbs]"][i-7] - data["Weight [lbs]"][i]);
+    }
+    add_sma(data, "Weekly Delta of Weight [lbs]");
+    return data;
+}
+
+</script>
+
+<div class="markdown">
+I'm a 6'4", 36 year old male who started trying to get in shape on Feb 11th 2023. 
+
+Click on the headers to collapse them.
+</div>
+
+<button type="button" class="collapsible">Weight</button>
+<div class="content">
+    <div id="Weight_lbs"></div>
+    <div class="markdown">
+"SMA" stands for "simple moving average". It's a 7 day trailing average unless specified, or the proceeding window of valid data is too short. 
+
+You can click on the legend to disable part of the graph.
+    </div>
+    <div id="Daily_Delta_Weight_lbs"></div>
+    <div id="Weekly_Delta_of_Weight_lbs"></div>
+    <div id="Cumulative_Active_Weight_Loss_lbs"></div>
+    <div class="markdown">
+Pounds of weight lost from exercise. This is probably an underestimate by about 10%. For more info see "Active Energy [C]" under the "Calorie" header.
+    </div>
+
+</div>
+
+
+
+<button type="button" class="collapsible">Macros</button>
+<div class="content">
+    <div id="Protein_g"></div>
+    <div id="Fat_g"></div>
+    <div id="Carbs_g"></div>
+</div>
+
+
+
+<button type="button" class="collapsible">Exercise</button>
+<div class="content">
+    <div id="Walking_Steps"></div>
+    <div id="Unadjusted_Walking_mi"></div>
+    <div class="markdown">
+For most data points, if I walk or eat etc after midnight I make sure to correctly attribute that to the previous day. 
+
+However, I initially only manually recorded *steps* but not *miles*. I do not have the ability to retroactively make that correction.
+
+Thus, this data is "unadjusted".
+    </div>
+    <div id="Cumulative_Unadjusted_Walking_mi"></div>
+
+</div>
+
+
+
+<button type="button" class="collapsible">Calories</button>
+<div class="content">
+    <div id="Daily_Calories_C"></div>
+    <div class="markdown">
+Active and resting energy are pulled from the Apple Health iPhone app. I don't have an Apple Watch. 
+    </div>
+    <div id="Deficit_C"></div>
+    <div id="Food_Energy_C"></div>
+    <div id="TDEE_C"></div>
+    <div id="Active_Energy_C"></div>
+    <div class="markdown">
+When exercising, only a portion of the increase calorie burn falls under "active energy". The justification for this I am not 100% sure about. Resting energy will increase by about 10% of the active energy. 
+    </div>
+    <div id="Resting_Energy_C"></div>
+    <div class="markdown">
+Resting energy is also "unadjusted", like miles walked. As I often exercise after midnight, this means the recorded resting energy might be elevated the day *after* the actual exercise.
+    </div>
+</div>
+
+
+
+<button type="button" class="collapsible">Analysis</button>
+<div class="content">
+    <div id="Observed_v_Expected_lbs"></div>
+    <div class="markdown">
+Expected weight loss is calculated assuming the cumulative caloric deficit is satisfied entirely through fat catabolism. (3,500 Calories per pound of fat)
+    </div>
+    <div id="Anomalous_Weight_Loss_lbs"></div>
+    <div class="markdown">
+This is the discrepency between the simplistic "expected" weight loss and the actual observed weight loss.
+
+There's actually an off-by-one error on some of this logic I haven't bothered to fix because weight is measured before that day's exercise. It doesn't *really* matter though. 
+    </div>
+</div>
+
+
+<script>
+function plot_obj_set_options(obj, data) {
+    obj.axis = {
+        x: {
+            type: "timeseries",
+            tick: {
+                format: function(d) {
+                    return short_month_names[d.getMonth()] + " " + d.getDate();
+                },
+                culling: {
+                    // Try for weekly spacing of ticks...
+                    max: 1 + Math.floor(data["Date"].length / 7)
+                }
+            }
+        },
+        y: {},
+        y2: {
+            show: true
+        }
+    };
+
+    obj.grid = {
+        focus: {
+            show: true,
+            y: true
+        },
+        y: {
+            show: true
+        }
+    };
+
+    obj.zoom = {
+        enabled: true,
+        type: "drag"
+    };
+}
+
+function plot_obj_observed_v_expected(data) {
+    var obj = {
+        title: {
+            text: "Observed & Expected Weight Loss [lbs]"
+        },
+        data: {
+            x: "x",
+            columns: [
+                ["Observed Weight Loss [lbs]", ...data["Observed Weight Loss [lbs]"]],
+                ["Observed Weight Loss [lbs] (SMA)", ...data["Observed Weight Loss [lbs] (SMA)"]],
+                ["Expected Weight Loss [lbs]", ...data["Expected Weight Loss [lbs]"]],
+                ["Expected Weight Loss [lbs] (SMA)", ...data["Expected Weight Loss [lbs] (SMA)"]],
+                ["x", ...data["Date"]]
+            ],
+            types: {},
+        },
+        bindto: "#Observed_v_Expected_lbs",
+    };
+    plot_obj_set_options(obj, data);
+
+    obj.data.types["Observed Weight Loss [lbs]"] = "scatter";
+    obj.data.types["Observed Weight Loss [lbs] (SMA)"] = "area";
+    obj.data.types["Expected Weight Loss [lbs]"] = "scatter";
+    obj.data.types["Expected Weight Loss [lbs] (SMA)"] = "area";
+
+    return obj;
+} // plot_obj
+
+function plot_obj_daily_calories(data) {
+    var obj = {
+        title: {
+            text: "Daily Calories [C]"
+        },
+        data: {
+            order: null,
+            x: "x",
+            columns: [
+                ["Resting Energy [C]", ...data["Resting Energy [C]"]],
+                ["Active Energy [C]", ...data["Active Energy [C]"]],
+                ["Food Energy [C]", ...data["Food Energy [C]"]],
+                ["x", ...data["Date"]],
+            ],
+            type: "bar",
+            types: {},
+            groups: [
+                ["Resting Energy [C]", "Active Energy [C]", "Food Energy [C]"]
+            ],
+        },
+        bindto: "#Daily_Calories_C",
+    };
+    plot_obj_set_options(obj, data);
+
+    return obj;
+} // plot_obj_daily_calories
+
+function plot_obj_tdee(data) {
+    const name = "TDEE [C]";
+    const fields = ["Resting Energy [C]", "Active Energy [C]"];
+
+    var obj = {
+        title: {
+            text: name
+        },
+        data: {
+            order: null,
+            x: "x",
+            columns: [
+                ["x", ...data["Date"]],
+            ],
+            type: "bar",
+            types: {},
+            groups: [fields],
+        },
+
+        bindto: "#" + to_id_name(name),
+    };
+    plot_obj_set_options(obj, data);
+
+
+    for (field of fields) {
+        obj.data.columns.push( [field, ...data[field]] );    
+    }
+
+    sum = [...data[fields[0]]];
+    for (let i = 1; i < fields.length; i++) {
+        sum = sum.SumArray(data[fields[i]]);
+    }
+    const sma = simpleMovingAverage(sum, 7);
+    const sma_name = name + " (SMA)";
+    obj.data.columns.push( [sma_name, ...sma]);
+    obj.data.types[sma_name] = "line";
+
+    return obj;
+} // plot_obj_tdee
+
+function plot_obj_daily_delta(data, field) {
+    const dd = daily_delta(data[field]);
+    const sma = simpleMovingAverage(dd, 7);
+    const field_sma = field + " (SMA)";
+
+    var obj = {
+        title: {
+            text: "Daily Delta of " + field
+        },
+        data: {
+            x: "x",
+            columns: [
+                [field, ...dd],
+                [field_sma, ...sma],
+                ["x", ...data["Date"]]
+            ],
+            types: {},
+        },
+        bindto: "#Daily_Delta_" + to_id_name(field),
+    };
+    plot_obj_set_options(obj, data);
+    obj.grid.y.lines = [{ value:0 }];
+
+    obj.data.types[field] = "scatter";
+    obj.data.types[field_sma] = "area";
+
+    return obj;
+} // plot_obj_daily_delta
+
+function plot_obj_cumulative(data, field) {
+    const cs = cumsum(data[field]);
+
+    var obj = {
+        title: {
+            text: "Cumulative " + field
+        },
+        data: {
+            x: "x",
+            columns: [
+                [field, ...cs],
+                ["x", ...data["Date"]]
+            ],
+            type: "area",
+        },
+        bindto: "#Cumulative_" + to_id_name(field),
+    };
+    plot_obj_set_options(obj, data);
+
+    return obj;
+} // plot_obj_cumulative
+
+function plot_obj_simple(data, field) {
+    var obj = {
+        title: {
+            text: field
+        },
+        data: {
+            x: "x",
+            columns: [
+                [field, ...data[field]],
+                ["x", ...data["Date"]]
+            ],
+            types: {},
+        },
+        bindto: "#" + to_id_name(field),
+    };
+    plot_obj_set_options(obj, data);
+
+    obj.data.types[field] = "area-spline";
+    return obj;
+} // plot_obj
+
+function plot_obj(data, field) {
+    const sma = simpleMovingAverage(data[field], 7);
+    const field_sma = field + " (SMA)";
+
+    var obj = {
+        title: {
+            text: field
+        },
+        data: {
+            x: "x",
+            columns: [
+                [field, ...data[field]],
+                [field_sma, ...sma],
+                ["x", ...data["Date"]]
+            ],
+            types: {},
+        },
+        bindto: "#" + to_id_name(field),
+    };
+    plot_obj_set_options(obj, data);
+
+    obj.data.types[field] = "scatter";
+    obj.data.types[field_sma] = "area";
+
+    return obj;
+} // plot_obj
+
+var d;
+function main() {
+    const f = Papa.parse("Data-Raw.csv", {
+        download: true,
+        complete: function(results, file) {
+            const raw_data = transpose(results);
+            const data = compute_derived(raw_data);
+            d = data;
+            console.log(data);
+
+            { // Weight            
+                var weight = plot_obj(data, "Weight [lbs]");
+                weight.axis.y.min = arrayMin(data["Weight [lbs]"]);
+                bb.generate(weight);
+
+                var delta = plot_obj_daily_delta(data, "Weight [lbs]");
+                bb.generate(delta);
+
+                var weekly = plot_obj_simple(data, "Weekly Delta of Weight [lbs]");
+                bb.generate(weekly);
+
+                var cumulative_active = plot_obj_cumulative(data, "Active Weight Loss [lbs]");
+                bb.generate(cumulative_active);
+
+            }
+
+            { // Nutrition
+                var protein = plot_obj(data, "Protein [g]");
+                bb.generate(protein);
+
+                var fat = plot_obj(data, "Fat [g]");
+                bb.generate(fat);
+
+                var carbs = plot_obj(data, "Carbs [g]");
+                bb.generate(carbs);
+            }
+
+            { // Exercise 
+                var steps = plot_obj(data, "Walking [Steps]");
+                bb.generate(steps);
+
+                var miles = plot_obj(data, "Unadjusted Walking [mi]");
+                bb.generate(miles);
+
+                var cumulative_miles = plot_obj_cumulative(data, "Unadjusted Walking [mi]");
+                bb.generate(cumulative_miles);
+            }
+
+            { // Calories
+                var bar_deficit = plot_obj_daily_calories(data);
+                bb.generate(bar_deficit);
+
+                var deficit = plot_obj(data, "Deficit [C]");
+                bb.generate(deficit);
+
+                var calories = plot_obj(data, "Food Energy [C]");
+                bb.generate(calories);
+
+                var tdee = plot_obj_tdee(data);
+                bb.generate(tdee);
+
+                var active = plot_obj(data, "Active Energy [C]");
+                bb.generate(active);
+
+                var resting = plot_obj(data, "Resting Energy [C]");
+                bb.generate(resting).axis.range({
+                    max:arrayMax(data["Resting Energy [C]"]),
+                    min:arrayMin(data["Resting Energy [C]"])
+                });
+
+            }
+
+            { // Analysis
+                var comparison = plot_obj_observed_v_expected(data);
+                bb.generate(comparison)
+
+                var anomalous = plot_obj(data, "Anomalous Weight Loss [lbs]");
+                bb.generate(anomalous);
+            }
+        } 
+    });
+
+    markdown();
+    collapsible();
+}
+main();
+</script>
+</body>
+</html>
