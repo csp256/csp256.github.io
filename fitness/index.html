@@ -13,14 +13,39 @@
     <script src="lib/papaparse.js"></script>
     <script src="lib/d3.min.js"></script>
     <script src="lib/billboard.js"></script>
-    <script src="lib/showdown.js"></script>
+    <script src="lib/showdown.js"></script> 
 
     <link rel="stylesheet" href="style/billboard.css">
-
+<!-- 
+Sublime default color scheme:
+dark grey   rgb(48, 56, 65)
+white       rgb(236 95 102)
+red         rgb(236 95 102)
+green       rgb(153 199 148)
+teal        rgb(95 180 180)
+grey        rgb(132 139 149)
+purple      rgb(198 149 198)
+yellow      rgb(249 174 88)
+blue        rgb(102 153 204)
+green       rgb(153 199 148
+orange      rgb(248 123 88)
+-->
     <style>
+        body {
+            background-color: rgb(48, 56, 65);
+            color: rgb(216, 222, 233);
+        }
+
+        #Weight_lbs svg {
+            color:#00FF00;
+            font-family: 'Alfa Slab One';
+            font-size: 18px;
+            font-color: #FFF;
+        }
+
         /* Style the button that is used to open and close the collapsible content */
         .collapsible {
-            background-color: #ccc;
+            background-color: rgb(132 139 149);
             color: #444;
             cursor: pointer;
             padding: 18px;
@@ -40,7 +65,7 @@
         .content {
             padding: 0 18px;
             overflow: hidden;
-            background-color: #f1f1f1;
+            background-color: rgb(48, 56, 65);
         }
     </style>
 </head>
@@ -255,7 +280,7 @@ Click on the headers to collapse them.
 
 <button type="button" class="collapsible">Weight</button>
 <div class="content">
-    <div id="Weight_lbs"></div>
+    <div id="Weight_lbs" class="bb"></div>
     <div class="markdown">
 "SMA" stands for "simple moving average". It's a 7 day trailing average unless specified, or the proceeding window of valid data is too short. 
 
@@ -369,6 +394,13 @@ function plot_obj_set_options(obj, data) {
         enabled: true,
         type: "drag"
     };
+
+    obj.padding = true;
+
+    obj.title.padding = {
+        top:20,
+        bottom:5
+    };
 }
 
 function plot_obj_observed_v_expected(data) {
@@ -386,6 +418,10 @@ function plot_obj_observed_v_expected(data) {
                 ["x", ...data["Date"]]
             ],
             types: {},
+            // colors: {
+            //     data1: "red",
+            //     data2: "green"
+            // }
         },
         bindto: "#Observed_v_Expected_lbs",
     };
@@ -566,6 +602,7 @@ function plot_obj(data, field) {
 } // plot_obj
 
 var d;
+var g;
 function main() {
     const f = Papa.parse("Data-Raw.csv", {
         download: true,
@@ -578,7 +615,7 @@ function main() {
             { // Weight            
                 var weight = plot_obj(data, "Weight [lbs]");
                 weight.axis.y.min = arrayMin(data["Weight [lbs]"]);
-                bb.generate(weight);
+                g = bb.generate(weight);
 
                 var delta = plot_obj_daily_delta(data, "Weight [lbs]");
                 bb.generate(delta);
