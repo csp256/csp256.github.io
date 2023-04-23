@@ -202,6 +202,10 @@ function compute_derived(raw_data) {
         raw_data["Active Energy [C]"], 
         raw_data["Food Energy [C]"]
     ]);
+    data["Active Weight Loss [lbs]"] = [];
+    for (let i = 0; i < len; i++) {
+        data["Active Weight Loss [lbs]"].push( data["Active Energy [C]"][i] / -3500.0);
+    }
     data["Cumulative Deficit [C]"] = cumsum(data["Deficit [C]"]);
     data["Expected Weight Loss [lbs]"] = [];
     for (let i = 0; i < len; i++) {
@@ -232,17 +236,26 @@ function compute_derived(raw_data) {
 </script>
 
 <div class="markdown">
-36 year old male, 6'4".
+I'm a 6'4", 36 year old male who started trying to get in shape on Feb 11th 2023. 
+
+Click on the headers to collapse them.
 </div>
 
 <button type="button" class="collapsible">Weight</button>
 <div class="content">
     <div id="Weight_lbs"></div>
     <div class="markdown">
-"SMA" stands for "simple moving average". It's a 7 day average unless specified, or the proceeding window of valid data is too short. 
+"SMA" stands for "simple moving average". It's a 7 day trailing average unless specified, or the proceeding window of valid data is too short. 
+
+You can click on the legend to disable part of the graph.
     </div>
     <div id="Daily_Delta_Weight_lbs"></div>
     <div id="Weekly_Delta_of_Weight_lbs"></div>
+    <div id="Cumulative_Active_Weight_Loss_lbs"></div>
+    <div class="markdown">
+Pounds of weight lost from exercise. This is probably an underestimate by about 10%. For more info see "Active Energy [C]" under the "Calorie" header.
+    </div>
+
 </div>
 
 
@@ -268,6 +281,7 @@ However, I initially only manually recorded *steps* but not *miles*. I do not ha
 Thus, this data is "unadjusted".
     </div>
     <div id="Cumulative_Unadjusted_Walking_mi"></div>
+
 </div>
 
 
@@ -275,21 +289,19 @@ Thus, this data is "unadjusted".
 <button type="button" class="collapsible">Calories</button>
 <div class="content">
     <div id="Daily_Calories_C"></div>
+    <div class="markdown">
+Active and resting energy are pulled from the Apple Health iPhone app. I don't have an Apple Watch. 
+    </div>
     <div id="Deficit_C"></div>
     <div id="Food_Energy_C"></div>
-    <div class="markdown">
-These are calories eaten, to be clear.
-    </div>
-
     <div id="TDEE_C"></div>
-
     <div id="Active_Energy_C"></div>
-
-    <div id="Cumulative_Active_Energy_C"></div>
-
+    <div class="markdown">
+When exercising, only a portion of the increase calorie burn falls under "active energy". The justification for this I am not 100% sure about. Resting energy will increase by about 10% of the active energy. 
+    </div>
     <div id="Resting_Energy_C"></div>
     <div class="markdown">
-Resting energy is also "unadjusted", like miles walked.
+Resting energy is also "unadjusted", like miles walked. As I often exercise after midnight, this means the recorded resting energy might be elevated the day *after* the actual exercise.
     </div>
 </div>
 
@@ -302,6 +314,11 @@ Resting energy is also "unadjusted", like miles walked.
 Expected weight loss is calculated assuming the cumulative caloric deficit is satisfied entirely through fat catabolism. (3,500 Calories per pound of fat)
     </div>
     <div id="Anomalous_Weight_Loss_lbs"></div>
+    <div class="markdown">
+This is the discrepency between the simplistic "expected" weight loss and the actual observed weight loss.
+
+There's actually an off-by-one error on some of this logic I haven't bothered to fix because weight is measured before that day's exercise. It doesn't *really* matter though. 
+    </div>
 </div>
 
 
@@ -320,7 +337,10 @@ function plot_obj_set_options(obj, data) {
                 }
             }
         },
-        y: {}
+        y: {},
+        y2: {
+            show: true
+        }
     };
 
     obj.grid = {
@@ -553,6 +573,10 @@ function main() {
 
                 var weekly = plot_obj_simple(data, "Weekly Delta of Weight [lbs]");
                 bb.generate(weekly);
+
+                var cumulative_active = plot_obj_cumulative(data, "Active Weight Loss [lbs]");
+                bb.generate(cumulative_active);
+
             }
 
             { // Nutrition
@@ -592,9 +616,6 @@ function main() {
 
                 var active = plot_obj(data, "Active Energy [C]");
                 bb.generate(active);
-
-                var cumulative_active = plot_obj_cumulative(data, "Active Energy [C]");
-                bb.generate(cumulative_active);
 
                 var resting = plot_obj(data, "Resting Energy [C]");
                 bb.generate(resting).axis.range({
