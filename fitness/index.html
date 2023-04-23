@@ -100,6 +100,12 @@ function simpleMovingAverage(input, interval) {
     return output;
 }
 
+function add_days(date, days) {
+    var result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+}
+
 // Specialized for the results from PapaParser
 function transpose(results) {
     let output = {};
@@ -109,9 +115,11 @@ function transpose(results) {
         output[results.data[0][field_id]] = [];
         // Date is special, handle it differently
         if ("Date" === results.data[0][field_id]) {
+            const start = new Date("February 11, 2023");
             for (var i = 1; i < results.data.length; i++) {
                 // This setYear hack will need updating :)
-                output[results.data[0][field_id]].push(new Date(results.data[i][field_id]).setYear(2023));
+                output[results.data[0][field_id]].push( add_days(start, i-1) );
+                // output[results.data[0][field_id]].push(new Date(results.data[i][field_id]).setYear(2023));
             }
         } else {
             for (var i = 1; i < results.data.length; i++) {
