@@ -299,7 +299,6 @@ You can also select part of the graph to zoom in on.
     <div class="markdown">
 Pounds of weight lost from exercise. This is probably an underestimate by about 10%. For more info see "Active Energy [C]" under the "Calorie" header.
     </div>
-
 </div>
 
 
@@ -379,6 +378,10 @@ function plot_obj_set_options(obj, data) {
         x: {
             type: "timeseries",
             tick: {
+                fit: true,
+                multiline: false,
+                autorotate: true,
+                // rotate:45,
                 format: function(d) {
                     return short_month_names[d.getMonth()] + " " + d.getDate();
                 },
@@ -393,15 +396,22 @@ function plot_obj_set_options(obj, data) {
                 outer: false,
                 format: function(s) { return s.toLocaleString(); }
             },
+            padding: {
+                top: 10,
+                bottom: 10
+            }
         },
         y2: {
             tick: {
                 outer: false,
                 format: function(s) { return s.toLocaleString(); }
             },
-            show: true
+            show: true,
         }
     };
+
+    obj.scatter = {zerobased:true};
+    obj.line = {zerobased:true};
 
     obj.grid = {
         focus: {
@@ -423,6 +433,33 @@ function plot_obj_set_options(obj, data) {
     obj.title.padding = {
         top:20,
         bottom:5
+    };
+
+    obj.tooltip = {
+        order: null,
+        grouped: true,
+        linked: false,
+        format: {
+            title: function(d) { 
+                return d.toLocaleDateString(
+                    undefined, 
+                    { 
+                        weekday: 'short', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    }
+                );
+            },
+            value: function(value, ratio, id) { 
+                return value.toLocaleString(
+                    undefined, 
+                    { 
+                        maximumFractionDigits: 1 
+                    }
+                ); 
+            }
+        }
     };
 }
 
@@ -509,9 +546,10 @@ function plot_obj_tdee(data) {
         bindto: "#" + to_id_name(name),
     };
     plot_obj_set_options(obj, data);
-    // obj.axis.y.max = -1;
+    // obj.axis.y.max = 0;
+    // obj.axis.y.padding.bottom = 10;
     // obj.axis.y.min = -6000;
-    obj.axis.y.outer = false;
+    // obj.axis.y.outer = false;
 
 
     for (field of fields) {
@@ -525,7 +563,7 @@ function plot_obj_tdee(data) {
     const sma = simpleMovingAverage(sum, 7);
     const sma_name = name + " (SMA)";
     obj.data.columns.push( [sma_name, ...sma]);
-    obj.data.types[sma_name] = "area";
+    obj.data.types[sma_name] = "line";
 
     return obj;
 } // plot_obj_tdee
@@ -687,8 +725,8 @@ function main() {
             }
 
             { // Calories
-                var bar_deficit = plot_obj_daily_calories(data);
-                bb.generate(bar_deficit);
+                var daily_calories = plot_obj_daily_calories(data);
+                bb.generate(daily_calories);
 
                 var deficit = plot_obj(data, "Deficit [C]");
                 bb.generate(deficit);
@@ -700,9 +738,11 @@ function main() {
                 g = bb.generate(tdee);
 
                 var active = plot_obj(data, "Active Energy [C]");
+                // active.axis.y.padding.bottom = 10;
                 bb.generate(active);
 
                 var resting = plot_obj(data, "Resting Energy [C]");
+                // resting.axis.y.padding.bottom = 10;
                 bb.generate(resting).axis.range({
                     max:arrayMax(data["Resting Energy [C]"]),
                     min:arrayMin(data["Resting Energy [C]"])

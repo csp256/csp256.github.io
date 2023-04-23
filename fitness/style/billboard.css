@@ -59,7 +59,7 @@
 .bb-grid {
   pointer-events: none; }
   .bb-grid line {
-    stroke: rgb(236 95 102); } /* dashed grid lines */
+    stroke: rgba(236, 95, 102, 0.7); } /* dashed grid lines */
   .bb-grid text {
     fill: #aaa; }
 
