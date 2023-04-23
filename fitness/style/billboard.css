@@ -80,6 +80,10 @@
   stroke-width: 1px;
   stroke: white; }
 
+.bb-circles circle {
+    opacity: 0.8 !important;
+}
+
 .bb-selected-circle {
   fill: white;
   stroke-width: 2px; }

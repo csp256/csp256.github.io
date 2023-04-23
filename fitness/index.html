@@ -19,7 +19,7 @@
 <!-- 
 Sublime default color scheme:
 dark grey   rgb(48, 56, 65)
-white       rgb(236 95 102)
+white       rgb(216 222 233)
 red         rgb(236 95 102)
 green       rgb(153 199 148)
 teal        rgb(95 180 180)
@@ -29,6 +29,15 @@ yellow      rgb(249 174 88)
 blue        rgb(102 153 204)
 green       rgb(153 199 148
 orange      rgb(248 123 88)
+
+light gray header rgb(79 86 94)
+dark gray footer rgb(46 50 56)
+
+default bb color pallete: 
+31 119 180
+255 127 14
+44 160 44
+214 39 40
 -->
     <style>
         body {
@@ -36,29 +45,24 @@ orange      rgb(248 123 88)
             color: rgb(216, 222, 233);
         }
 
-        #Weight_lbs svg {
-            color:#00FF00;
-            font-family: 'Alfa Slab One';
-            font-size: 18px;
-            font-color: #FFF;
-        }
-
         /* Style the button that is used to open and close the collapsible content */
         .collapsible {
-            background-color: rgb(132 139 149);
-            color: #444;
+            background-color: rgb(46 50 56); /*rgb(79 86 94);*/ /*rgb(132 139 149);*/
+            color: rgb(95 180 180);
             cursor: pointer;
             padding: 18px;
+            padding-left: 15%;
             width: 100%;
             border: none;
             text-align: left;
             outline: none;
-            font-size: 15px;
+            font-size: 1.6em;
+            font-family: monospace, monospace;
         }
 
         /* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
         /*.active, */.collapsible:hover {
-            background-color: #aaa;
+            color: rgb(236 95 102);
         }
 
         /* Style the collapsible content.  */
@@ -287,6 +291,9 @@ Click on the headers to collapse them.
 You can click on the legend to disable part of the graph.
     </div>
     <div id="Daily_Delta_Weight_lbs"></div>
+    <div class="markdown">
+You can also select part of the graph to zoom in on.
+    </div>
     <div id="Weekly_Delta_of_Weight_lbs"></div>
     <div id="Cumulative_Active_Weight_Loss_lbs"></div>
     <div class="markdown">
@@ -360,6 +367,13 @@ There's actually an off-by-one error on some of this logic I haven't bothered to
 
 
 <script>
+const palette = [
+    "rgba(31 119 180 255)",
+    "rgba(255 127 14 255)",
+    "rgba(44 160 44 255)",
+    "rgba(214 39 40 255)",
+    ];
+
 function plot_obj_set_options(obj, data) {
     obj.axis = {
         x: {
@@ -374,8 +388,17 @@ function plot_obj_set_options(obj, data) {
                 }
             }
         },
-        y: {},
+        y: {
+            tick: {
+                outer: false,
+                format: function(s) { return s.toLocaleString(); }
+            },
+        },
         y2: {
+            tick: {
+                outer: false,
+                format: function(s) { return s.toLocaleString(); }
+            },
             show: true
         }
     };
@@ -418,14 +441,16 @@ function plot_obj_observed_v_expected(data) {
                 ["x", ...data["Date"]]
             ],
             types: {},
-            // colors: {
-            //     data1: "red",
-            //     data2: "green"
-            // }
+            colors: {
+                // data1: "red",
+                // data2: "green"
+            }
         },
         bindto: "#Observed_v_Expected_lbs",
     };
     plot_obj_set_options(obj, data);
+
+    // obj.data.colors["Observed Weight Loss [lbs]"] = "rgba(30,50,190,0.8)";
 
     obj.data.types["Observed Weight Loss [lbs]"] = "scatter";
     obj.data.types["Observed Weight Loss [lbs] (SMA)"] = "area";
@@ -484,6 +509,9 @@ function plot_obj_tdee(data) {
         bindto: "#" + to_id_name(name),
     };
     plot_obj_set_options(obj, data);
+    // obj.axis.y.max = -1;
+    // obj.axis.y.min = -6000;
+    obj.axis.y.outer = false;
 
 
     for (field of fields) {
@@ -497,7 +525,7 @@ function plot_obj_tdee(data) {
     const sma = simpleMovingAverage(sum, 7);
     const sma_name = name + " (SMA)";
     obj.data.columns.push( [sma_name, ...sma]);
-    obj.data.types[sma_name] = "line";
+    obj.data.types[sma_name] = "area";
 
     return obj;
 } // plot_obj_tdee
@@ -590,10 +618,15 @@ function plot_obj(data, field) {
                 ["x", ...data["Date"]]
             ],
             types: {},
+            color: {},
+            colors: {}
         },
         bindto: "#" + to_id_name(field),
     };
     plot_obj_set_options(obj, data);
+
+    // obj.data.colors[field] = "rgba(102, 153, 204, 255)";
+    // obj.data.colors[field] = "rgb(102 153 204)";
 
     obj.data.types[field] = "scatter";
     obj.data.types[field_sma] = "area";
@@ -641,6 +674,9 @@ function main() {
 
             { // Exercise 
                 var steps = plot_obj(data, "Walking [Steps]");
+                var step_format = function (s) { return (s/1000).toLocaleString() + "k"; };
+                steps.axis.y.tick.format = step_format;
+                steps.axis.y2.tick.format = step_format;
                 bb.generate(steps);
 
                 var miles = plot_obj(data, "Unadjusted Walking [mi]");
@@ -661,7 +697,7 @@ function main() {
                 bb.generate(calories);
 
                 var tdee = plot_obj_tdee(data);
-                bb.generate(tdee);
+                g = bb.generate(tdee);
 
                 var active = plot_obj(data, "Active Energy [C]");
                 bb.generate(active);
