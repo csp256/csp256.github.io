@@ -274,6 +274,21 @@ function compute_derived(raw_data) {
     return data;
 }
 
+function treatAsUTC(date) {
+    var result = new Date(date);
+    result.setMinutes(result.getMinutes() - result.getTimezoneOffset());
+    return result;
+}
+
+function daysBetween(startDate, endDate) {
+    var millisecondsPerDay = 24 * 60 * 60 * 1000;
+    return (treatAsUTC(endDate) - treatAsUTC(startDate)) / millisecondsPerDay;
+}
+
+function days_in_domain(domain) {
+    return daysBetween(domain[0], domain[1]);
+}
+
 </script>
 
 <div class="markdown">
@@ -374,22 +389,24 @@ const palette = [
     ];
 
 function plot_obj_set_options(obj, data) {
+    obj.clipPath = true;
     obj.axis = {
         x: {
             type: "timeseries",
             tick: {
-                fit: true,
+                centered: true,
+                fit: false,
+                count: 8,
                 multiline: false,
                 autorotate: true,
-                // rotate:45,
+                rotate: 90,
                 format: function(d) {
                     return short_month_names[d.getMonth()] + " " + d.getDate();
                 },
-                culling: {
-                    // Try for weekly spacing of ticks...
-                    max: 1 + Math.floor(data["Date"].length / 7)
-                }
-            }
+                culling: false,
+                outer: true,
+                values: data["Date"],
+            },
         },
         y: {
             tick: {
@@ -425,8 +442,57 @@ function plot_obj_set_options(obj, data) {
 
     obj.zoom = {
         enabled: true,
-        type: "drag"
+        type: "drag",
+        rescale: true,
+        // onzoom: function(domain) {
+        // },
+        // onzoomend: function(domain) {
+        // },
     };
+
+    obj.onrendered = function() {
+        // if (typeof this.rendered_before === "undefined") {
+        //     this.rendered_before = true;
+        //     return;
+        // }
+        const domain = this.internal.zoom.getDomain();
+        const days = days_in_domain(domain);
+        const tick_count = 14;
+        const stride = Math.ceil(days / tick_count);
+
+        // find first and last valid date (yes this is janky as hell)
+        const len = this.internal.axis.x.config.tickValues.length;
+        let i = 0;
+        let first = 0;
+        for (; i < len; i++) {
+            if (domain[0] <= this.internal.axis.x.config.tickValues[i]) {
+                first = i;
+                break;
+            }
+        }
+        let last = Math.min(i, len-1);
+        for (; i < len; i++) {
+            if (domain[1] < this.internal.axis.x.config.tickValues[i]) {
+                break;
+            }
+            last = i;
+        }
+
+        // Without this offset we have a tendency for wasted padding on left or right
+        const offset = Math.floor(((last) % stride) / 2);
+
+        d3.selectAll(this.internal.config.bindto + " .bb-axis-x .tick tspan").each(
+            function(v) {
+                if (first <= v.index && v.index <= last) {
+                    this.textContent = ((v.index % stride) == offset) 
+                        ? v.splitted
+                        : "";
+                } else {
+                    this.textContent = "";
+                }
+            }
+        );
+    }
 
     obj.padding = true;
 
