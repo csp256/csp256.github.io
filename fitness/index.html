@@ -10,10 +10,10 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
-    <script src="lib/papaparse.js"></script>
+    <script src="lib/papaparse.min.js"></script>
     <script src="lib/d3.min.js"></script>
-    <script src="lib/billboard.js"></script>
-
+    <script src="lib/billboard.js"></script> 
+<!-- TODO: switch to the 'min' version of billboard -->
     <link rel="stylesheet" href="style/billboard.css">
 <!-- 
 Sublime default color scheme:
@@ -188,15 +188,6 @@ function collapsible() {
     }
 }
 
-// Converts "markdown" divs to proper HTML; purely for my convenience
-function markdown() {
-    var converter = new showdown.Converter();
-    converter.setOption('ellipsis', false); // do not replace "..." with unicode!
-    for (div of document.getElementsByClassName("markdown")) {
-        div.innerHTML = converter.makeHtml(div.innerHTML);
-    }
-}
-
 function arrayMax(array) { return array.reduce(function(a, b) { return Math.max(a, b); }); }
 function arrayMin(array) { return array.reduce(function(a, b) { return Math.min(a, b); }); }
 
@@ -331,7 +322,7 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 <button type="button" class="collapsible">Exercise</button>
 <div class="content">
     <div id="Walking_Steps"></div>
-    <div id="Unadjusted_Walking_mi"></div>
+    <div id="Walking_mi"></div>
     <div class="markdown">
 <p>For most data points, if I walk or eat etc after midnight I make sure to correctly attribute that to the previous day. </p>
 
@@ -339,7 +330,7 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 
 <p>Thus, this data is "unadjusted".</p>
     </div>
-    <div id="Cumulative_Unadjusted_Walking_mi"></div>
+    <div id="Cumulative_Walking_mi"></div>
 
 </div>
 
@@ -784,10 +775,10 @@ function main() {
                 steps.axis.y2.tick.format = step_format;
                 bb.generate(steps);
 
-                var miles = plot_obj(data, "Unadjusted Walking [mi]");
+                var miles = plot_obj(data, "Walking [mi]");
                 bb.generate(miles);
 
-                var cumulative_miles = plot_obj_cumulative(data, "Unadjusted Walking [mi]");
+                var cumulative_miles = plot_obj_cumulative(data, "Walking [mi]");
                 bb.generate(cumulative_miles);
             }
 
@@ -826,7 +817,6 @@ function main() {
         } 
     });
 
-    markdown();
     collapsible();
 }
 main();
