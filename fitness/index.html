@@ -458,7 +458,7 @@ function plot_obj_set_options(obj, data) {
         // }
         const domain = this.internal.zoom.getDomain();
         const days = days_in_domain(domain);
-        const tick_count = 21;
+        const tick_count = 16;
         const stride = Math.ceil(days / tick_count);
 
         // find first and last valid date (yes this is janky as hell)
