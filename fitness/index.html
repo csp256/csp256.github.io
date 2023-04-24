@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Fitness</title>
+    <title>Fitness Plotter</title>
     <link rel="icon" type="image/x-icon" href="img/icons8-weightlifting-arcade-96.png">
 
     <meta http-equiv='cache-control' content='no-cache'> 
@@ -283,11 +283,13 @@ function days_in_domain(domain) {
     return daysBetween(domain[0], domain[1]);
 }
 
+function hide_personal() {
+    document.querySelectorAll(".csp").forEach(el => {el.innerHTML = "";});
+}
 
 function handle_files(input) {
+    hide_personal()
     let file = input.files[0];
-
-    document.querySelectorAll(".csp").forEach(el => {el.innerHTML = "";});
     Papa.parse(file, {
         complete: function(results) {
             update(results.data);
@@ -389,9 +391,6 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 
 
 <script>
-// const inputElement = document.getElementById("input");
-// inputElement.addEventListener("change", handleFiles, false);
-
 
 const palette = [
     "rgba(31 119 180 255)",
@@ -839,7 +838,11 @@ function update(results) {
     }
 }
 
-function main(csv) {
+function main() {
+    const url_params = new URLSearchParams(window.location.search);
+    var url_csv = url_params.get('csv');
+    const csv = (url_csv == null) ? "Data-Raw.csv" : url_csv;
+
     const f = Papa.parse(csv, {
         download: true,
         complete: function(results, file) {
@@ -847,7 +850,7 @@ function main(csv) {
         } 
     });
 }
-main("Data-Raw.csv");
+main()
 collapsible();
 </script>
 </body>
