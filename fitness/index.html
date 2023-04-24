@@ -141,8 +141,6 @@ function add_days(date, days) {
 // Specialized for the results from PapaParser
 function transpose(data) {
     let output = {};
-    console.log("trans")
-    console.log(data)
     let fields = data[0].length;
     // Probably a more JS way of doing this but yolo
     for (var field_id = 0; field_id < fields; field_id++) {
@@ -290,16 +288,8 @@ function handle_files(input) {
     let file = input.files[0];
 
     document.querySelectorAll(".csp").forEach(el => {el.innerHTML = "";});
-    // console.log(file)
-    // var fr = new FileReader();
-    // fr.readAsText(file);
-    // fr.onload = function() {
-    //     console.log(fr.result);
-    // }
-
     Papa.parse(file, {
         complete: function(results) {
-            console.log("Finished:", results.data);
             update(results.data);
         }
     });
@@ -320,7 +310,7 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 
 <p>You can zoom in on the plots by selecting a region.</p>
 
-<p>You can also try with your own CSV file, <a href="Data-Raw.csv" target="_blank">formatted like this</a>. <input type="file" id="input"/ onchange="handle_files(this)"></p>
+<p>You can also try with your own CSV file, <a href="Data-Raw.csv" target="_blank">formatted like this</a> (column order shouldn't matter). <input type="file" id="input"/ onchange="handle_files(this)"></p>
 </div>
 
 <button type="button" class="collapsible">Weight</button>
