@@ -842,8 +842,12 @@ function update(results) {
 
 function main() {
     const url_params = new URLSearchParams(window.location.search);
-    var url_csv = url_params.get('csv');
-    const csv = (url_csv == null) ? "Data-Raw.csv" : url_csv;
+    let csv = url_params.get('csv');
+    if (csv == null) {
+        csv = "Data-Raw.csv";
+    } else {
+        hide_personal();
+    }
 
     const f = Papa.parse(csv, {
         download: true,
