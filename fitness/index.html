@@ -207,6 +207,15 @@ function hadamard_sum(array) {
     return output;
 }
 
+function hadamard_difference(a, b) {
+    const len = a.length;
+    let output = [...a];
+    for (let i = 0; i < len; i++) {
+        output[i] -= b[i];
+    }
+    return output;
+}
+
 Array.prototype.SumArray = function (arr) {
     var sum = this.map(function (num, idx) {
         return num + arr[idx];
@@ -224,7 +233,13 @@ function daily_delta(x) {
     return out;
 }
 
-function add_sma(data, field, smoothing = 7) {
+function add_sma(data, field, smoothing) {
+    if (typeof smoothing === "undefined") {
+        smoothing = 7;
+    }
+    // const field_sma = field + (smoothing == 7) 
+    //     ? " (SMA)"
+    //     : " (SMA " + smoothing + ")"
     data[field + " (SMA)"] = simpleMovingAverage(data[field], smoothing);
 }
 
@@ -232,31 +247,44 @@ function add_sma(data, field, smoothing = 7) {
 function compute_derived(raw_data) {
     const len = raw_data["Date"].length;
     var data = raw_data;
+
     data["Deficit [C]"] = hadamard_sum([
         raw_data["Resting Energy [C]"], 
         raw_data["Active Energy [C]"], 
         raw_data["Food Energy [C]"]
     ]);
+    add_sma(data, "Deficit [C]");
+
     data["Active Weight Loss [lbs]"] = [];
     for (let i = 0; i < len; i++) {
         data["Active Weight Loss [lbs]"].push( data["Active Energy [C]"][i] / -3500.0);
     }
     data["Cumulative Deficit [C]"] = cumsum(data["Deficit [C]"]);
+
     data["Expected Weight Loss [lbs]"] = [];
     for (let i = 0; i < len; i++) {
         data["Expected Weight Loss [lbs]"].push(data["Cumulative Deficit [C]"][i] / -3500.0);
     }
     add_sma(data, "Expected Weight Loss [lbs]");
+
     data["Observed Weight Loss [lbs]"] = [];
     for (let i = 0; i < len; i++) {
         data["Observed Weight Loss [lbs]"].push(data["Weight [lbs]"][0] - data["Weight [lbs]"][i]);
     }
     add_sma(data, "Observed Weight Loss [lbs]");
+
+    data["Implied Deficit [C]"] = [...daily_delta(data["Weight [lbs]"])].map(el => { return el * 3500.0; });
+    add_sma(data, "Implied Deficit [C]");
+
+    data["Deficit Error [C]"] = hadamard_difference(data["Deficit [C]"], data["Implied Deficit [C]"]);
+    // add_sma(data, "Deficit Error [C]", 14); 
+
     data["Anomalous Weight Loss [lbs]"] = [];
     for (let i = 0; i < len; i++) {
         data["Anomalous Weight Loss [lbs]"].push(data["Observed Weight Loss [lbs]"][i] - data["Expected Weight Loss [lbs]"][i]);
     }
     add_sma(data, "Anomalous Weight Loss [lbs]");
+
     data["Weekly Delta of Weight [lbs]"] = [];
     for (let i = 0; i < 7; i++) {
         data["Weekly Delta of Weight [lbs]"].push(data["Weight [lbs]"][0] - data["Weight [lbs]"][i]);
@@ -265,6 +293,7 @@ function compute_derived(raw_data) {
         data["Weekly Delta of Weight [lbs]"].push(data["Weight [lbs]"][i-7] - data["Weight [lbs]"][i]);
     }
     add_sma(data, "Weekly Delta of Weight [lbs]");
+
     return data;
 }
 
@@ -312,7 +341,7 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 
 <p>You can zoom in on the plots by selecting a region.</p>
 
-<p>You can also try with your own CSV file, <a href="Data-Raw.csv" target="_blank">formatted like this</a> (column order shouldn't matter). <input type="file" id="input"/ onchange="handle_files(this)"></p>
+<p>You can also try with your own CSV file, <a href="Data-Raw.csv" target="_blank">formatted like this</a> (column order shouldn't matter). <input type="file" id="input"/ onchange="handle_files(this)" accept=".csv"></p>
 
 <p>You can alternatively host your CSV file somewhere and pass the path to it as a URL parameter, like so: https://csp256.github.io/fitness/index.html?csv=https://www.yourdomain.com/your_data.csv</p>
 </div>
@@ -389,16 +418,26 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 
 <p>There's actually an off-by-one error on some of this logic I haven't bothered to fix because weight is measured before that day's exercise. It doesn't <em>really</em> matter though. </p>
     </div>
+    <div id="Observed_v_Expected_Deficit_C"></div>
+    <div class="markdown">
+<p>"Implied deficit" the caloric deficit implied from weight loss, assuming all weight lost is body fat. Note that the individual data points are toggled off by default, but can be toggled on.</p>
+    </div>
+    <div id="Deficit_Error_C"></div>
+    <div class="markdown">
+<p>This is the difference between the computed and implied caloric deficit. Positive numbers mean that weight loss was faster than expected, negative mean it was slower.</p>
+
+<p>Because the data is so noisy, this plot uses a 14 day moving average instead of the typical 7 day SMA.</p>
+    </div>
 </div>
 
 
 <script>
 
 const palette = [
-    "rgba(31 119 180 255)",
-    "rgba(255 127 14 255)",
-    "rgba(44 160 44 255)",
-    "rgba(214 39 40 255)",
+        "rgba(31 119 180 255)",
+        "rgba(255 127 14 255)",
+        "rgba(44 160 44 255)",
+        "rgba(214 39 40 255)",
     ];
 
 function plot_obj_set_options(obj, data) {
@@ -417,7 +456,7 @@ function plot_obj_set_options(obj, data) {
                     return short_month_names[d.getMonth()] + " " + d.getDate();
                 },
                 culling: false,
-                outer: true,
+                outer: false,
                 values: data["Date"],
             },
         },
@@ -500,7 +539,7 @@ function plot_obj_set_options(obj, data) {
         last = Math.max(1, last);
 
         // Without this offset we have a tendency for wasted padding on left or right
-        const offset = Math.floor(((last) % stride) / 2);
+        const offset = Math.ceil(((last) % stride) / 2);
 
         d3.selectAll(this.internal.config.bindto + " .bb-axis-x .tick tspan").each(
             function(v) {
@@ -550,18 +589,22 @@ function plot_obj_set_options(obj, data) {
     };
 }
 
-function plot_obj_observed_v_expected(data) {
+function plot_obj_observed_v_expected(data, fields, title, bindto) {
+    fields_sma = [...fields].map(el => { return el + " (SMA)"; });
+    console.log(fields_sma)
+    console.log(data)
+
     var obj = {
         title: {
-            text: "Observed & Expected Weight Loss [lbs]"
+            text: title
         },
         data: {
             x: "x",
             columns: [
-                ["Observed Weight Loss [lbs]", ...data["Observed Weight Loss [lbs]"]],
-                ["Observed Weight Loss [lbs] (SMA)", ...data["Observed Weight Loss [lbs] (SMA)"]],
-                ["Expected Weight Loss [lbs]", ...data["Expected Weight Loss [lbs]"]],
-                ["Expected Weight Loss [lbs] (SMA)", ...data["Expected Weight Loss [lbs] (SMA)"]],
+                [fields[0], ...data[fields[0]]],
+                [fields_sma[0], ...data[fields_sma[0]]],
+                [fields[1], ...data[fields[1]]],
+                [fields_sma[1], ...data[fields_sma[1]]],
                 ["x", ...data["Date"]]
             ],
             types: {},
@@ -570,19 +613,19 @@ function plot_obj_observed_v_expected(data) {
                 // data2: "green"
             }
         },
-        bindto: "#Observed_v_Expected_lbs",
+        bindto: bindto,
     };
     plot_obj_set_options(obj, data);
 
     // obj.data.colors["Observed Weight Loss [lbs]"] = "rgba(30,50,190,0.8)";
 
-    obj.data.types["Observed Weight Loss [lbs]"] = "scatter";
-    obj.data.types["Observed Weight Loss [lbs] (SMA)"] = "area";
-    obj.data.types["Expected Weight Loss [lbs]"] = "scatter";
-    obj.data.types["Expected Weight Loss [lbs] (SMA)"] = "area";
+    obj.data.types[fields[0]] = "scatter";
+    obj.data.types[fields_sma[0]] = "area";
+    obj.data.types[fields[1]] = "scatter";
+    obj.data.types[fields_sma[1]] = "area";
 
     return obj;
-} // plot_obj
+} // plot_obj_observed_v_expected
 
 function plot_obj_daily_calories(data) {
     var obj = {
@@ -629,7 +672,6 @@ function plot_obj_tdee(data) {
             types: {},
             groups: [fields],
         },
-
         bindto: "#" + to_id_name(name),
     };
     plot_obj_set_options(obj, data);
@@ -727,8 +769,8 @@ function plot_obj_simple(data, field) {
     return obj;
 } // plot_obj
 
-function plot_obj(data, field) {
-    const sma = simpleMovingAverage(data[field], 7);
+function plot_obj(data, field, smoothing = 7) {
+    const sma = simpleMovingAverage(data[field], smoothing);
     const field_sma = field + " (SMA)";
 
     var obj = {
@@ -832,11 +874,37 @@ function update(results) {
     }
 
     { // Analysis
-        var comparison = plot_obj_observed_v_expected(data);
-        bb.generate(comparison);
+        var weight_comparison = plot_obj_observed_v_expected(
+            data, 
+            [
+                "Observed Weight Loss [lbs]",
+                "Expected Weight Loss [lbs]"
+            ], 
+            "Observed & Expected Weight Loss [lbs]",
+            "#Observed_v_Expected_lbs");
+        bb.generate(weight_comparison);
 
         var anomalous = plot_obj(data, "Anomalous Weight Loss [lbs]");
         bb.generate(anomalous);
+
+        var deficit_comparison = plot_obj_observed_v_expected(
+            data, 
+            [
+                "Deficit [C]",
+                "Implied Deficit [C]"
+            ],
+            "Computed & Implied Deficit [C]", 
+            "#Observed_v_Expected_Deficit_C",
+            {
+                toggle_scatter: true
+            }
+        );
+        deficit_comparison_plot = bb.generate(deficit_comparison);
+        deficit_comparison_plot.toggle("Deficit [C]");
+        deficit_comparison_plot.toggle("Implied Deficit [C]");
+
+        var deficit_error = plot_obj(data, "Deficit Error [C]", 14);
+        bb.generate(deficit_error).toggle("Deficit Error [C]");
     }
 }
 
