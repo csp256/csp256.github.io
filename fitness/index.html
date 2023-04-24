@@ -434,12 +434,14 @@ function plot_obj_set_options(obj, data) {
 
     obj.zoom = {
         enabled: true,
-        type: "drag",
-        rescale: true,
+        type: "wheel",
+        rescale: false,
+        // onzoomstart: function() {
+        // },
         // onzoom: function(domain) {
         // },
         // onzoomend: function(domain) {
-        // },
+        // }
     };
 
     obj.onrendered = function() {
