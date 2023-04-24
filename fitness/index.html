@@ -13,7 +13,6 @@
     <script src="lib/papaparse.js"></script>
     <script src="lib/d3.min.js"></script>
     <script src="lib/billboard.js"></script>
-    <script src="lib/showdown.js"></script> 
 
     <link rel="stylesheet" href="style/billboard.css">
 <!-- 
@@ -291,28 +290,30 @@ function days_in_domain(domain) {
 
 </script>
 
-<div class="markdown">
+<div>
+<p>
 I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023. 
+</p>
 
-Click on the headers to collapse them.
+<p>Click on the headers to collapse them.</p>
 </div>
 
 <button type="button" class="collapsible">Weight</button>
 <div class="content">
     <div id="Weight_lbs" class="bb"></div>
     <div class="markdown">
-"SMA" stands for "simple moving average". It's a 7 day trailing average unless specified, or the proceeding window of valid data is too short. 
+<p>"SMA" stands for "simple moving average". It's a 7 day trailing average unless specified, or the proceeding window of valid data is too short. </p>
 
-You can click on the legend to disable part of the graph.
+<p>You can click on the legend to disable part of the graph.</p>
     </div>
     <div id="Daily_Delta_Weight_lbs"></div>
     <div class="markdown">
-You can also select part of the graph to zoom in on.
+<p>You can also select part of the graph to zoom in on.</p>
     </div>
     <div id="Weekly_Delta_of_Weight_lbs"></div>
     <div id="Cumulative_Active_Weight_Loss_lbs"></div>
     <div class="markdown">
-Pounds of weight lost from exercise. This is probably an underestimate by about 10%. For more info see "Active Energy [C]" under the "Calorie" header.
+<p>Pounds of weight lost from exercise. This is probably an underestimate by about 10%. For more info see "Active Energy [C]" under the "Calorie" header.</p>
     </div>
 </div>
 
@@ -332,11 +333,11 @@ Pounds of weight lost from exercise. This is probably an underestimate by about 
     <div id="Walking_Steps"></div>
     <div id="Unadjusted_Walking_mi"></div>
     <div class="markdown">
-For most data points, if I walk or eat etc after midnight I make sure to correctly attribute that to the previous day. 
+<p>For most data points, if I walk or eat etc after midnight I make sure to correctly attribute that to the previous day. </p>
 
-However, I initially only manually recorded *steps* but not *miles*. I do not have the ability to retroactively make that correction.
+<p>However, I initially only manually recorded <em>steps</em> but not <em>miles</em>. I do not have the ability to retroactively make that correction.</p>
 
-Thus, this data is "unadjusted".
+<p>Thus, this data is "unadjusted".</p>
     </div>
     <div id="Cumulative_Unadjusted_Walking_mi"></div>
 
@@ -348,18 +349,18 @@ Thus, this data is "unadjusted".
 <div class="content">
     <div id="Daily_Calories_C"></div>
     <div class="markdown">
-Active and resting energy are pulled from the Apple Health iPhone app. I don't have an Apple Watch. 
+<p>Active and resting energy are pulled from the Apple Health iPhone app. I don't have an Apple Watch. </p>
     </div>
     <div id="Deficit_C"></div>
     <div id="Food_Energy_C"></div>
     <div id="TDEE_C"></div>
     <div id="Active_Energy_C"></div>
     <div class="markdown">
-When exercising, only a portion of the increase calorie burn falls under "active energy". The justification for this I am not 100% sure about. Resting energy will increase by about 10% of the active energy. 
+<p>When exercising, only a portion of the increase calorie burn falls under "active energy". The justification for this I am not 100% sure about. Resting energy will increase by about 10% of the active energy. </p>
     </div>
     <div id="Resting_Energy_C"></div>
     <div class="markdown">
-Resting energy is also "unadjusted", like miles walked. As I often exercise after midnight, this means the recorded resting energy might be elevated the day *after* the actual exercise.
+<p>Resting energy is also "unadjusted", like miles walked. As I often exercise after midnight, this means the recorded resting energy might be elevated the day <em>after</em> the actual exercise.</p>
     </div>
 </div>
 
@@ -369,13 +370,13 @@ Resting energy is also "unadjusted", like miles walked. As I often exercise afte
 <div class="content">
     <div id="Observed_v_Expected_lbs"></div>
     <div class="markdown">
-Expected weight loss is calculated assuming the cumulative caloric deficit is satisfied entirely through fat catabolism. (3,500 Calories per pound of fat)
+<p>Expected weight loss is calculated assuming the cumulative caloric deficit is satisfied entirely through fat catabolism. (3,500 Calories per pound of fat)</p>
     </div>
     <div id="Anomalous_Weight_Loss_lbs"></div>
     <div class="markdown">
-This is the discrepency between the simplistic "expected" weight loss and the actual observed weight loss.
+<p>This is the discrepency between the simplistic "expected" weight loss and the actual observed weight loss.</p>
 
-There's actually an off-by-one error on some of this logic I haven't bothered to fix because weight is measured before that day's exercise. It doesn't *really* matter though. 
+<p>There's actually an off-by-one error on some of this logic I haven't bothered to fix because weight is measured before that day's exercise. It doesn't <em>really</em> matter though. </p>
     </div>
 </div>
 
@@ -457,7 +458,7 @@ function plot_obj_set_options(obj, data) {
         // }
         const domain = this.internal.zoom.getDomain();
         const days = days_in_domain(domain);
-        const tick_count = 14;
+        const tick_count = 21;
         const stride = Math.ceil(days / tick_count);
 
         // find first and last valid date (yes this is janky as hell)
