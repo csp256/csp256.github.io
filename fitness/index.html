@@ -743,7 +743,7 @@ function main() {
 
             { // Weight            
                 var weight = plot_obj(data, "Weight [lbs]");
-                weight.axis.y.min = arrayMin(data["Weight [lbs]"]);
+                weight.axis.y.min = arrayMin(data["Weight [lbs]"]) - 5;
                 g = bb.generate(weight);
 
                 var delta = plot_obj_daily_delta(data, "Weight [lbs]");
