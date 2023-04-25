@@ -13,6 +13,8 @@
     <script src="lib/papaparse.min.js"></script>
     <script src="lib/d3.min.js"></script>
     <script src="lib/billboard.js"></script> 
+    <script src="lib/num2word.js"></script> 
+    <script src="lib/one_euro_filter.js"></script> 
 <!-- TODO: switch to the 'min' version of billboard -->
     <link rel="stylesheet" href="style/billboard.css">
 <!-- 
@@ -76,9 +78,94 @@ default bb color pallete:
         }
     </style>
 </head>
-<body>
+<body onload="setTimeout(jump_to_anchor, 10)">
 
-<script type="text/javascript">   
+<script type="text/javascript">
+function jump_to_anchor() {
+    const anchor = get_anchor()
+    if (anchor != null) { 
+        location.href = "#" + anchor;
+    }
+}
+
+function get_anchor() {
+    return (1 < document.URL.split('#').length) 
+        ? document.URL.split('#')[1] 
+        : null;
+}
+
+// Define an object that maps numbers to their word form
+const numbersToWords = {
+    0: "zero",
+    1: "one",
+    2: "two",
+    3: "three",
+    4: "four",
+    5: "five",
+    6: "six",
+    7: "seven",
+    8: "eight",
+    9: "nine",
+    10: "ten",
+    11: "eleven",
+    12: "twelve",
+    13: "thirteen",
+    14: "fourteen",
+    15: "fifteen",
+    16: "sixteen",
+    17: "seventeen",
+    18: "eighteen",
+    19: "nineteen",
+    20: "twenty",
+    30: "thirty",
+    40: "forty",
+    50: "fifty",
+    60: "sixty",
+    70: "seventy",
+    80: "eighty",
+    90: "ninety",
+};
+
+// Define the convertNumberToWords function
+function num_to_words(number) {
+    // if number present in object no need to go further
+    if (number in numbersToWords) return numbersToWords[number];
+
+    // Initialize the words variable to an empty string
+    let words = "";
+
+    // If the number is greater than or equal to 100, handle the hundreds place (ie, get the number of hundres)
+    if (number >= 100) {
+        // Add the word form of the number of hundreds to the words string
+        words += convertNumberToWords(Math.floor(number / 100)) + " hundred";
+
+        // Remove the hundreds place from the number
+        number %= 100;
+    }
+
+    // If the number is greater than zero, handle the remaining digits
+    if (number > 0) {
+        // If the words string is not empty, add "and"
+        if (words !== "") words += " and ";
+
+        // If the number is less than 20, look up the word form in the numbersToWords object
+        if (number < 20) words += numbersToWords[number];
+        else {
+            // Otherwise, add the word form of the tens place to the words string
+            //if number = 37, Math.floor(number /10) will give you 3 and 3 * 10 will give you 30
+            words += numbersToWords[Math.floor(number / 10) * 10];
+
+            // If the ones place is not zero, add the word form of the ones place
+            if (number % 10 > 0) {
+                words += "-" + numbersToWords[number % 10];
+            }
+        }
+    }
+
+    // Return the word form of the number
+    return words;
+}
+
 const short_month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function to_ascii(s) {
@@ -86,13 +173,41 @@ function to_ascii(s) {
 }
 
 function to_id_name(s) {
-    return s
-        .replaceAll(/ /g, "_") // replace space with _
-        .replace(/[\])}[{(]/g, ""); // remove brackets, parens, braces
+    // .replaceAll(/ /g, "_") // replace space with _
+    let t = s.replace(/[\])}[{(]/g, ""); // remove brackets, parens, braces
+    let a = t.split(' ')
+    const first = parseInt(a[0]);
+    if (!isNaN(first)) {
+        a[0] = num_to_words(first);
+        a[0] = a[0].charAt(0).toUpperCase() + a[0].slice(1);
+    }
+    t = a.join('_'); // effectively replaces space with _
+    return t;
+}
+
+function exponential_moving_average(input, alpha) {
+    const len = input.length;
+    let output = [];
+    let i = 0;
+    let low_pass;
+
+    for (; i < len; i++) {
+        output.push(input[i]);
+        if (input[i] != 0) {
+            low_pass = input[i];
+            break;
+        }
+    }
+    // let's play: spot the bug that doesn't matter!
+    for (;i < len; i++) {
+        low_pass = (input[i] - low_pass) * alpha + input[i];
+        outut.push(low_pass);
+    }
+    return output;
 }
 
 // Note this function will "snap" to new values if SMA is 0
-function simpleMovingAverage(input, interval) {
+function simple_moving_average(input, interval) {
     const length = input.length;
     let output = [];
     let i = 0;
@@ -132,12 +247,6 @@ function simpleMovingAverage(input, interval) {
     return output;
 }
 
-function add_days(date, days) {
-    var result = new Date(date);
-    result.setDate(result.getDate() + days);
-    return result;
-}
-
 // Specialized for the results from PapaParser
 function transpose(data) {
     let output = {};
@@ -150,7 +259,6 @@ function transpose(data) {
             // const start = new Date("February 11, 2023");
             for (var i = 1; i < data.length; i++) {
                 // This setYear hack will need updating :)
-                // output[data[0][field_id]].push( add_days(start, i-1) );
                 output[data[0][field_id]].push(new Date(data[i][field_id]).setYear(2023));
             }
         } else {
@@ -172,6 +280,9 @@ function transpose(data) {
             output[field][i] = -output[field][i];
         }
     }
+
+    // temporary
+    output["Height [m]"] = 1.93; 
 
     return output;
 }
@@ -233,14 +344,35 @@ function daily_delta(x) {
     return out;
 }
 
-function add_sma(data, field, smoothing) {
-    if (typeof smoothing === "undefined") {
-        smoothing = 7;
+function add_day_delta(data, field, days, smoothing) {
+    const delta_field = days + " Day Delta of " + field;
+    if (typeof data[delta_field] === "undefined") {
+        const len = data["Date"].length;
+        data[delta_field] = [];
+        for (let i = 0; i < days; i++) {
+            data[delta_field].push(data[field][i] - data[field][0]);
+        }
+        for (let i = days; i < len; i++) {
+            data[delta_field].push(data[field][i] - data[field][i-days]);
+        }
     }
-    // const field_sma = field + (smoothing == 7) 
-    //     ? " (SMA)"
-    //     : " (SMA " + smoothing + ")"
-    data[field + " (SMA)"] = simpleMovingAverage(data[field], smoothing);
+    return delta_field;
+}
+
+function add_sma(data, field, smoothing = 7, force = false) {
+    const field_sma = field + " (SMA " + smoothing + ")";
+    if (force || typeof data[field_sma] === "undefined") {
+        data[field_sma] = simple_moving_average(data[field], smoothing);
+    }
+    return field_sma;
+}
+
+function add_cumsum(data, field) {
+    const field_cs = "Cumulative " + field;
+    if (typeof data[field_cs] === "undefined") {
+        data[field_cs] = cumsum(data[field]);
+    }
+    return field_cs;
 }
 
 // All the fields which are functions of the raw data are added here. 
@@ -248,51 +380,42 @@ function compute_derived(raw_data) {
     const len = raw_data["Date"].length;
     var data = raw_data;
 
+    data["Weight [kg]"] = data["Weight [lbs]"].map(n => 0.453592 * n);
+
     data["Deficit [C]"] = hadamard_sum([
         raw_data["Resting Energy [C]"], 
         raw_data["Active Energy [C]"], 
         raw_data["Food Energy [C]"]
     ]);
-    add_sma(data, "Deficit [C]");
 
-    data["Active Weight Loss [lbs]"] = [];
+    data["Active Weight Change [lbs]"] = [];
     for (let i = 0; i < len; i++) {
-        data["Active Weight Loss [lbs]"].push( data["Active Energy [C]"][i] / -3500.0);
+        data["Active Weight Change [lbs]"].push( data["Active Energy [C]"][i] / 3500.0);
     }
-    data["Cumulative Deficit [C]"] = cumsum(data["Deficit [C]"]);
 
-    data["Expected Weight Loss [lbs]"] = [];
+    data["Expected Weight Change [lbs]"] = [];
+    add_cumsum(data, "Deficit [C]"); // need this one
     for (let i = 0; i < len; i++) {
-        data["Expected Weight Loss [lbs]"].push(data["Cumulative Deficit [C]"][i] / -3500.0);
+        data["Expected Weight Change [lbs]"].push(data["Cumulative Deficit [C]"][i] / 3500.0);
     }
-    add_sma(data, "Expected Weight Loss [lbs]");
 
-    data["Observed Weight Loss [lbs]"] = [];
+    data["Observed Weight Change [lbs]"] = [];
     for (let i = 0; i < len; i++) {
-        data["Observed Weight Loss [lbs]"].push(data["Weight [lbs]"][0] - data["Weight [lbs]"][i]);
+        data["Observed Weight Change [lbs]"].push(data["Weight [lbs]"][i] - data["Weight [lbs]"][0]);
     }
-    add_sma(data, "Observed Weight Loss [lbs]");
 
     data["Implied Deficit [C]"] = [...daily_delta(data["Weight [lbs]"])].map(el => { return el * 3500.0; });
-    add_sma(data, "Implied Deficit [C]");
 
     data["Deficit Error [C]"] = hadamard_difference(data["Deficit [C]"], data["Implied Deficit [C]"]);
-    // add_sma(data, "Deficit Error [C]", 14); 
 
-    data["Anomalous Weight Loss [lbs]"] = [];
+    data["Anomalous Weight Change [lbs]"] = [];
     for (let i = 0; i < len; i++) {
-        data["Anomalous Weight Loss [lbs]"].push(data["Observed Weight Loss [lbs]"][i] - data["Expected Weight Loss [lbs]"][i]);
+        data["Anomalous Weight Change [lbs]"].push(data["Observed Weight Change [lbs]"][i] - data["Expected Weight Change [lbs]"][i]);
     }
-    add_sma(data, "Anomalous Weight Loss [lbs]");
 
-    data["Weekly Delta of Weight [lbs]"] = [];
-    for (let i = 0; i < 7; i++) {
-        data["Weekly Delta of Weight [lbs]"].push(data["Weight [lbs]"][0] - data["Weight [lbs]"][i]);
-    }
-    for (let i = 7; i < len; i++) {
-        data["Weekly Delta of Weight [lbs]"].push(data["Weight [lbs]"][i-7] - data["Weight [lbs]"][i]);
-    }
-    add_sma(data, "Weekly Delta of Weight [lbs]");
+    add_day_delta(data, "Weight [lbs]", 1);
+    add_day_delta(data, "Weight [lbs]", 7);
+    add_day_delta(data, "Weight [lbs]", 30);
 
     return data;
 }
@@ -335,7 +458,7 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 
 <p>Click on the headers to collapse them.</p>
 
-<p>"SMA" stands for "simple moving average". It's a 7 day trailing average unless specified, or the proceeding window of valid data is too short. </p>
+<p>"SMA" stands for "simple moving average". It's a trailing average over the indicated number of days, unless the proceeding window of valid data is too short.</p>
 
 <p>You can click on the legend to disable part of the plot.</p>
 
@@ -348,20 +471,22 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 
 <button type="button" class="collapsible">Weight</button>
 <div class="content">
-    <!-- WTF? This anchor breaks everything. -->
     <a id="Weight"></a>
     <div id="Weight_lbs"></div>
 
-    <a id="Daily_Delta_Weight"></a>
-    <div id="Daily_Delta_Weight_lbs"></div>
+    <a id="One_Day_Delta_of_Weight"></a>
+    <div id="One_Day_Delta_of_Weight_lbs"></div>
 
-    <a id="Weekly_Delta_of_Weight"></a>
-    <div id="Weekly_Delta_of_Weight_lbs"></div>
+    <a id="Seven_Day_Delta_of_Weight"></a>
+    <div id="Seven_Day_Delta_of_Weight_lbs"></div>
 
-    <a id="Cumulative_Active_Weight_Loss"></a>
-    <div id="Cumulative_Active_Weight_Loss_lbs"></div>
+    <a id="Thirty_Day_Delta_of_Weight"></a>
+    <div id="Thirty_Day_Delta_of_Weight_lbs"></div>
+
+    <a id="Cumulative_Active_Weight_Change"></a>
+    <div id="Cumulative_Active_Weight_Change_lbs"></div>
     <div class="markdown">
-<p>Pounds of weight lost from exercise. This is probably an underestimate by about 10%. For more info see "Active Energy [C]" under the "Calorie" header.</p>
+<p>Portion of weight change from exercise. This is probably an underestimate by about 10%. For more info see "Active Energy [C]" under the "Calorie" header.</p>
     </div>
 </div>
 
@@ -442,8 +567,8 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 <p>Expected weight loss is calculated assuming the cumulative caloric deficit is satisfied entirely through fat catabolism. (3,500 Calories per pound of fat)</p>
     </div>
 
-    <a id="Anomalous_Weight_Loss"></a>
-    <div id="Anomalous_Weight_Loss_lbs"></div>
+    <a id="Anomalous_Weight_Change"></a>
+    <div id="Anomalous_Weight_Change_lbs"></div>
     <div class="markdown">
 <p>This is the discrepency between the simplistic "expected" weight loss and the actual observed weight loss.</p>
 
@@ -465,6 +590,30 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
     </div>
 </div>
 
+
+
+<button type="button" class="collapsible">Body Indexes</button>
+<div class="content">
+    <p>If you supplied your own CSV data, please input your height in centimeters: <input type="number" id="height_input" name="height_input" min="10" max="300" style="width:5em"> <button type="button" onclick='d["Height [m]"] = 0.01 * document.getElementById("height_input").value; plot_body_indexes(d)'>Update Plots</button> (Work in progress!)
+</p>
+
+    <a id="New_BMI"></a>
+    <div id="New_BMI_"></div>
+    <div class="markdown">
+<p>This is BMI (body mass index) but with improved handling of short and tall people. It is still a flawed metric with limited applicability. <a href="https://en.wikipedia.org/wiki/Body_mass_index#Children_and_youth" target="_blank">People under the age of 20 should read this.</a></p>
+    </div>
+
+    <a id="Old_BMI"></a>
+    <div id="Old_BMI_"></div>
+    <div class="markdown">
+<p>This is the BMI still in use by insurance companies and doctors. It can be very misleading for short or tall people, or people with a lot of muscle.</p>
+    </div>
+
+    <a id="Ponderal_Index"></a>
+    <div id="Ponderal_Index_"></div>
+    <div class="markdown">
+<p>Should be consistent for people past adolescence. <a href="https://en.wikipedia.org/wiki/Corpulence_index" target="_blank">Read more here.</a> The nominal range is 11 to 14 or 15.</p>
+    </div>
 
 <script>
 
@@ -520,9 +669,16 @@ function plot_obj_set_options(obj, data) {
     obj.grid = {
         focus: {
             show: true,
-            y: true
+            y: true,
+            edge: true
         },
         y: {
+            lines: [
+                {
+                    value: 0,
+                    text: ""
+                },
+            ],
             show: true
         }
     };
@@ -531,22 +687,9 @@ function plot_obj_set_options(obj, data) {
         enabled: true,
         type: "drag",
         rescale: false,
-        // onzoomstart: function() {
-        // },
-        // onzoom: function(domain) {
-        // },
-        // onzoomend: function(domain) {
-        // }
     };
-    // if (700 <= document.body.clientWidth) {
-    //     obj.zoom.type = "drag";
-    // }
 
     obj.onrendered = function() {
-        // if (typeof this.rendered_before === "undefined") {
-        //     this.rendered_before = true;
-        //     return;
-        // }
         const domain = this.internal.zoom.getDomain();
         const days = days_in_domain(domain);
 
@@ -599,7 +742,6 @@ function plot_obj_set_options(obj, data) {
     obj.tooltip = {
         order: null,
         grouped: true,
-        linked: false,
         format: {
             title: function(d) { 
                 return d.toLocaleDateString(
@@ -625,7 +767,7 @@ function plot_obj_set_options(obj, data) {
 }
 
 function plot_obj_observed_v_expected(data, fields, title, bindto) {
-    fields_sma = [...fields].map(el => { return el + " (SMA)"; });
+    fields_sma = [...fields].map(el => { return add_sma(data, el) });
 
     var obj = {
         title: {
@@ -641,16 +783,11 @@ function plot_obj_observed_v_expected(data, fields, title, bindto) {
                 ["x", ...data["Date"]]
             ],
             types: {},
-            colors: {
-                // data1: "red",
-                // data2: "green"
-            }
+            colors: {}
         },
         bindto: bindto,
     };
     plot_obj_set_options(obj, data);
-
-    // obj.data.colors["Observed Weight Loss [lbs]"] = "rgba(30,50,190,0.8)";
 
     obj.data.types[fields[0]] = "scatter";
     obj.data.types[fields_sma[0]] = "area";
@@ -708,11 +845,6 @@ function plot_obj_tdee(data) {
         bindto: "#" + to_id_name(name),
     };
     plot_obj_set_options(obj, data);
-    // obj.axis.y.max = 0;
-    // obj.axis.y.padding.bottom = 10;
-    // obj.axis.y.min = -6000;
-    // obj.axis.y.outer = false;
-
 
     for (field of fields) {
         obj.data.columns.push( [field, ...data[field]] );    
@@ -722,59 +854,30 @@ function plot_obj_tdee(data) {
     for (let i = 1; i < fields.length; i++) {
         sum = sum.SumArray(data[fields[i]]);
     }
-    const sma = simpleMovingAverage(sum, 7);
-    const sma_name = name + " (SMA)";
+    const sma = simple_moving_average(sum, 7);
+    const sma_name = name + " (SMA 7)";
     obj.data.columns.push( [sma_name, ...sma]);
-    obj.data.types[sma_name] = "line";
+    obj.data.types[sma_name] = "area";
 
     return obj;
 } // plot_obj_tdee
 
-function plot_obj_daily_delta(data, field) {
-    const dd = daily_delta(data[field]);
-    const sma = simpleMovingAverage(dd, 7);
-    const field_sma = field + " (SMA)";
+function plot_obj_cumulative(data, raw_field) {
+    const field = add_cumsum(data, raw_field);
 
     var obj = {
         title: {
-            text: "Daily Delta of " + field
+            text: field
         },
         data: {
             x: "x",
             columns: [
-                [field, ...dd],
-                [field_sma, ...sma],
-                ["x", ...data["Date"]]
-            ],
-            types: {},
-        },
-        bindto: "#Daily_Delta_" + to_id_name(field),
-    };
-    plot_obj_set_options(obj, data);
-    obj.grid.y.lines = [{ value:0 }];
-
-    obj.data.types[field] = "scatter";
-    obj.data.types[field_sma] = "area";
-
-    return obj;
-} // plot_obj_daily_delta
-
-function plot_obj_cumulative(data, field) {
-    const cs = cumsum(data[field]);
-
-    var obj = {
-        title: {
-            text: "Cumulative " + field
-        },
-        data: {
-            x: "x",
-            columns: [
-                [field, ...cs],
+                [field, ...data[field]],
                 ["x", ...data["Date"]]
             ],
             type: "area",
         },
-        bindto: "#Cumulative_" + to_id_name(field),
+        bindto: "#" + to_id_name(field),
     };
     plot_obj_set_options(obj, data);
 
@@ -794,7 +897,7 @@ function plot_obj_simple(data, field) {
             ],
             types: {},
         },
-        bindto: "#" + to_id_name(field),
+        bindto: "#" + to_id_name(String(field)),
     };
     plot_obj_set_options(obj, data);
 
@@ -803,8 +906,10 @@ function plot_obj_simple(data, field) {
 } // plot_obj
 
 function plot_obj(data, field, smoothing = 7) {
-    const sma = simpleMovingAverage(data[field], smoothing);
-    const field_sma = field + " (SMA)";
+    const field_sma = field + " (SMA " + smoothing + ")";
+    if (typeof data[field_sma] === "undefined") {
+        add_sma(data, field, smoothing);
+    }
 
     var obj = {
         title: {
@@ -814,7 +919,7 @@ function plot_obj(data, field, smoothing = 7) {
             x: "x",
             columns: [
                 [field, ...data[field]],
-                [field_sma, ...sma],
+                [field_sma, ...data[field_sma]],
                 ["x", ...data["Date"]]
             ],
             types: {},
@@ -825,9 +930,6 @@ function plot_obj(data, field, smoothing = 7) {
     };
     plot_obj_set_options(obj, data);
 
-    // obj.data.colors[field] = "rgba(102, 153, 204, 255)";
-    // obj.data.colors[field] = "rgb(102 153 204)";
-
     obj.data.types[field] = "scatter";
     obj.data.types[field_sma] = "area";
 
@@ -835,25 +937,39 @@ function plot_obj(data, field, smoothing = 7) {
 } // plot_obj
 
 var d;
+var charts = {};
 function update(results) {
     const raw_data = transpose(results);
     const data = compute_derived(raw_data);
     d = data;
 
-    { // Weight            
+    { // Weight
         var weight = plot_obj(data, "Weight [lbs]");
         weight.axis.y.min = arrayMin(data["Weight [lbs]"]) - 5;
-        bb.generate(weight);
+        charts["Weight [lbs]"] = bb.generate(weight);
 
-        var delta = plot_obj_daily_delta(data, "Weight [lbs]");
-        bb.generate(delta);
+        var delta = plot_obj(data, "1 Day Delta of Weight [lbs]");
+        charts["1 Day Delta of Weight [lbs]"] = bb.generate(delta);
 
-        var weekly = plot_obj_simple(data, "Weekly Delta of Weight [lbs]");
-        bb.generate(weekly);
+        var weekly = plot_obj(data, "7 Day Delta of Weight [lbs]");
+        var e = new OneEuroFilter(20, 1, 0.1);
+        var filt = []
+        for (let i = 0; i < data["Date"].length; i++) {
+            filt.push(e.filter(data["7 Day Delta of Weight [lbs]"][i]));
+        }
+        // filt2 = data["7 Day Delta of Weight [lbs]"].map((
+        //     e = new OneEuroFilter(3, 1, 0.),
+        //     n => e.filter(n)
+        // ));
+        weekly.data.columns.push(["Test of OneEuroFilter", ...filt]);
+        // weekly.data.columns.push(["Test of OneEuroFilter2", ...filt2]);
+        charts["7 Day Delta of Weight [lbs]"] = bb.generate(weekly).toggle("Test of OneEuroFilter");
 
-        var cumulative_active = plot_obj_cumulative(data, "Active Weight Loss [lbs]");
+        var monthly = plot_obj(data, "30 Day Delta of Weight [lbs]");
+        bb.generate(monthly);
+
+        var cumulative_active = plot_obj_cumulative(data, "Active Weight Change [lbs]");
         bb.generate(cumulative_active);
-
     }
 
     { // Nutrition
@@ -861,7 +977,7 @@ function update(results) {
         bb.generate(protein);
 
         var fat = plot_obj(data, "Fat [g]");
-        bb.generate(fat);
+        charts["Fat [g]"] = bb.generate(fat);
 
         var carbs = plot_obj(data, "Carbs [g]");
         bb.generate(carbs);
@@ -910,14 +1026,14 @@ function update(results) {
         var weight_comparison = plot_obj_observed_v_expected(
             data, 
             [
-                "Observed Weight Loss [lbs]",
-                "Expected Weight Loss [lbs]"
+                "Observed Weight Change [lbs]",
+                "Expected Weight Change [lbs]"
             ], 
-            "Observed & Expected Weight Loss [lbs]",
+            "Observed & Expected Weight Change [lbs]",
             "#Observed_v_Expected_lbs");
         bb.generate(weight_comparison);
 
-        var anomalous = plot_obj(data, "Anomalous Weight Loss [lbs]");
+        var anomalous = plot_obj(data, "Anomalous Weight Change [lbs]");
         bb.generate(anomalous);
 
         var deficit_comparison = plot_obj_observed_v_expected(
@@ -937,8 +1053,62 @@ function update(results) {
         deficit_comparison_plot.toggle("Implied Deficit [C]");
 
         var deficit_error = plot_obj(data, "Deficit Error [C]", 14);
-        bb.generate(deficit_error).toggle("Deficit Error [C]");
+        charts["Deficit Error [C]"] = bb.generate(deficit_error).toggle("Deficit Error [C]");
     }
+
+    { // Body Indexes
+        plot_body_indexes(data);
+    }
+}
+
+function plot_body_indexes(data) {
+    data["New BMI"] = data["Weight [kg]"].map((
+        scalar = 1.0 / Math.pow(data["Height [m]"], 2.5),
+        n => n * scalar));
+
+    data["Old BMI"] = data["Weight [kg]"].map((
+        scalar = 1.0 / Math.pow(data["Height [m]"], 2),
+        n => n * scalar));
+
+    data["Ponderal Index"] = data["Weight [kg]"].map((
+        scalar = 1.0 / Math.pow(data["Height [m]"], 3),
+        n => n * scalar));
+
+    const spread = 0.5;
+    if (typeof this.first_time === "undefined") {
+        this.first_time = false;
+        function plot_body_index(data, field) {
+            var obj = plot_obj(data, field);
+            // document.getElementById(to_id_name(field) + "_").innerHTML = "";
+            obj.bindto += "_";
+            obj.axis.y.min = arrayMin(data[field]) - spread;
+            obj.axis.y.max = arrayMax(data[field]) + spread;
+            charts[field] = bb.generate(obj);
+        }
+        plot_body_index(data, "New BMI");
+        plot_body_index(data, "Old BMI");
+        plot_body_index(data, "Ponderal Index");
+    } else {
+        function update_body_index(field) {
+            field_sma = add_sma(data, field, 7, true);
+            charts[field].config("axis.y.min", arrayMin(data[field]) - spread, false);
+            charts[field].config("axis.y.max", arrayMax(data[field]) + spread, false);
+            // https://naver.github.io/billboard.js/release/latest/doc/Chart.html#load
+            charts[field].load( 
+                {
+                    columns:[
+                        [field, ...data[field]],
+                        [field_sma, ...data[field_sma]]
+                    ],
+                    resizeAfter: true
+                }
+            );
+        }
+        update_body_index("New BMI");
+        update_body_index("Old BMI");
+        update_body_index("Ponderal Index");
+    }
+
 }
 
 function main() {
