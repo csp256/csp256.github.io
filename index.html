@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Fitness Plotter</title>
+    <link rel="icon" type="image/x-icon" href="img/icons8-weightlifting-arcade-96.png">
+
+    <meta http-equiv='cache-control' content='no-cache'> 
+    <meta http-equiv='expires' content='0'> 
+    <meta http-equiv='pragma' content='no-cache'>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <script src="lib/papaparse.min.js"></script>
+    <script src="lib/d3.min.js"></script>
+    <script src="lib/billboard.js"></script> 
+    <script src="lib/num2word.js"></script> 
+    <script src="lib/one_euro_filter.js"></script> 
+<!-- TODO: switch to the 'min' version of billboard -->
+    <link rel="stylesheet" href="style/billboard.css">
+<!-- 
+Sublime default color scheme:
+dark grey   rgb(48, 56, 65)
+white       rgb(216 222 233)
+red         rgb(236 95 102)
+green       rgb(153 199 148)
+teal        rgb(95 180 180)
+grey        rgb(132 139 149)
+purple      rgb(198 149 198)
+yellow      rgb(249 174 88)
+blue        rgb(102 153 204)
+green       rgb(153 199 148
+orange      rgb(248 123 88)
+
+light gray header rgb(79 86 94)
+dark gray footer rgb(46 50 56)
+
+default bb color pallete: 
+31 119 180
+255 127 14
+44 160 44
+214 39 40
+-->
+    <style>
+        body {
+            background-color: rgb(48, 56, 65);
+            color: rgb(216, 222, 233);
+        }
+
+        a {
+            color: rgb(102 153 204)
+        }
+
+        /* Style the button that is used to open and close the collapsible content */
+        .collapsible {
+            background-color: rgb(46 50 56); /*rgb(79 86 94);*/ /*rgb(132 139 149);*/
+            color: rgb(95 180 180);
+            cursor: pointer;
+            padding: 18px;
+            padding-left: 15%;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 1.6em;
+            font-family: monospace, monospace;
+        }
+
+        /* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+        /*.active, */.collapsible:hover {
+            color: rgb(236 95 102);
+        }
+
+        /* Style the collapsible content.  */
+        .content {
+            padding: 0 18px;
+            overflow: hidden;
+            background-color: rgb(48, 56, 65);
+        }
+    </style>
+</head>
+<body onload="setTimeout(jump_to_anchor, 10)">
+
+<script type="text/javascript">
+function jump_to_anchor() {
+    const anchor = get_anchor()
+    if (anchor != null) { 
+        location.href = "#" + anchor;
+    }
+}
+
+function get_anchor() {
+    return (1 < document.URL.split('#').length) 
+        ? document.URL.split('#')[1] 
+        : null;
+}
+
+// Define an object that maps numbers to their word form
+const numbersToWords = {
+    0: "zero",
+    1: "one",
+    2: "two",
+    3: "three",
+    4: "four",
+    5: "five",
+    6: "six",
+    7: "seven",
+    8: "eight",
+    9: "nine",
+    10: "ten",
+    11: "eleven",
+    12: "twelve",
+    13: "thirteen",
+    14: "fourteen",
+    15: "fifteen",
+    16: "sixteen",
+    17: "seventeen",
+    18: "eighteen",
+    19: "nineteen",
+    20: "twenty",
+    30: "thirty",
+    40: "forty",
+    50: "fifty",
+    60: "sixty",
+    70: "seventy",
+    80: "eighty",
+    90: "ninety",
+};
+
+// Define the convertNumberToWords function
+function num_to_words(number) {
+    // if number present in object no need to go further
+    if (number in numbersToWords) return numbersToWords[number];
+
+    // Initialize the words variable to an empty string
+    let words = "";
+
+    // If the number is greater than or equal to 100, handle the hundreds place (ie, get the number of hundres)
+    if (number >= 100) {
+        // Add the word form of the number of hundreds to the words string
+        words += convertNumberToWords(Math.floor(number / 100)) + " hundred";
+
+        // Remove the hundreds place from the number
+        number %= 100;
+    }
+
+    // If the number is greater than zero, handle the remaining digits
+    if (number > 0) {
+        // If the words string is not empty, add "and"
+        if (words !== "") words += " and ";
+
+        // If the number is less than 20, look up the word form in the numbersToWords object
+        if (number < 20) words += numbersToWords[number];
+        else {
+            // Otherwise, add the word form of the tens place to the words string
+            //if number = 37, Math.floor(number /10) will give you 3 and 3 * 10 will give you 30
+            words += numbersToWords[Math.floor(number / 10) * 10];
+
+            // If the ones place is not zero, add the word form of the ones place
+            if (number % 10 > 0) {
+                words += "-" + numbersToWords[number % 10];
+            }
+        }
+    }
+
+    // Return the word form of the number
+    return words;
+}
+
+const short_month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function to_ascii(s) {
+    return s.replaceAll("[^\\p{ASCII}]");
+}
+
+function to_id_name(s) {
+    // .replaceAll(/ /g, "_") // replace space with _
+    let t = s.replace(/[\])}[{(]/g, ""); // remove brackets, parens, braces
+    let a = t.split(' ')
+    const first = parseInt(a[0]);
+    if (!isNaN(first)) {
+        a[0] = num_to_words(first);
+        a[0] = a[0].charAt(0).toUpperCase() + a[0].slice(1);
+    }
+    t = a.join('_'); // effectively replaces space with _
+    return t;
+}
+
+function exponential_moving_average(input, alpha) {
+    const len = input.length;
+    let output = [];
+    let i = 0;
+    let low_pass;
+
+    for (; i < len; i++) {
+        output.push(input[i]);
+        if (input[i] != 0) {
+            low_pass = input[i];
+            break;
+        }
+    }
+    // let's play: spot the bug that doesn't matter!
+    for (;i < len; i++) {
+        low_pass = (input[i] - low_pass) * alpha + input[i];
+        outut.push(low_pass);
+    }
+    return output;
+}
+
+// Note this function will "snap" to new values if SMA is 0
+function simple_moving_average(input, interval) {
+    const length = input.length;
+    let output = [];
+    let i = 0;
+    let sum = 0;
+
+    let snap = 0; // typically, index of first non-trivial value
+    while (i < interval && i < length) {
+        if (sum == 0) {
+            sum = input[i];
+            snap = 0;
+        } else {
+            sum += input[i];
+        }
+        i++;
+        output.push(sum / (i - snap));
+    }
+
+    while (interval <= i && i < length) {
+        if (sum == 0) {
+            sum = input[i];
+            snap = i;
+            output.push( sum );
+        } else {
+            if (i - interval < snap) {
+                // still warming up
+                sum += input[i];
+                output.push(sum / (1 + (i - snap)));
+            } else {
+                // nominal case
+                sum += input[i] - input[i - interval];
+                output.push(sum / interval);
+            }
+        }
+        i++;
+    }
+
+    return output;
+}
+
+// Specialized for the results from PapaParser
+function transpose(data) {
+    let output = {};
+    let fields = data[0].length;
+    // Probably a more JS way of doing this but yolo
+    for (var field_id = 0; field_id < fields; field_id++) {
+        output[data[0][field_id]] = [];
+        // Date is special, handle it differently
+        if ("Date" === data[0][field_id]) {
+            // const start = new Date("February 11, 2023");
+            for (var i = 1; i < data.length; i++) {
+                // This setYear hack will need updating :)
+                output[data[0][field_id]].push(new Date(data[i][field_id]).setYear(2023));
+            }
+        } else {
+            for (var i = 1; i < data.length; i++) {
+                const datum = parseFloat(
+                    // Must remove all commas from string before parsing...
+                    data[i][field_id].replace(/\,/g, "")
+                );
+                output[data[0][field_id]].push(
+                    // Replaces NaN with 0
+                    datum ? datum : 0
+                );
+            }
+        }
+    }
+
+    for (field of ["Active Energy [C]", "Resting Energy [C]"]) {
+        for (var i = 0; i < output[field].length; i++) {
+            output[field][i] = -output[field][i];
+        }
+    }
+
+    // temporary
+    output["Height [m]"] = 1.93; 
+
+    return output;
+}
+
+// Makes the buttons collapse next element when clicked
+function collapsible() {
+    var coll = document.getElementsByClassName("collapsible");
+    for (var i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function () {
+            this.classList.toggle("active");
+            var content = this.nextElementSibling;
+            if (content.style.display === "none") {
+                content.style.display = "block";
+            } else {
+                content.style.display = "none";
+            }
+        });
+    }
+}
+
+function arrayMax(array) { return array.reduce(function(a, b) { return Math.max(a, b); }); }
+function arrayMin(array) { return array.reduce(function(a, b) { return Math.min(a, b); }); }
+
+function hadamard_sum(array) {
+    const num_arrays = array.length;
+    const len = array[0].length;
+    let output = [...array[0]];
+    for (let array_index = 1; array_index < num_arrays; array_index++) {
+        for (let idx = 0; idx < len; idx++) {
+            output[idx] += array[array_index][idx];
+        }
+    }
+    return output;
+}
+
+function hadamard_difference(a, b) {
+    const len = a.length;
+    let output = [...a];
+    for (let i = 0; i < len; i++) {
+        output[i] -= b[i];
+    }
+    return output;
+}
+
+function hadamard_quotient(a, b) {
+    const len = a.length;
+    let output = [...a];
+    for (let i = 0; i < len; i++) {
+        output[i] /= b[i];
+    }
+    return output;    
+}
+
+
+
+Array.prototype.SumArray = function (arr) {
+    var sum = this.map(function (num, idx) {
+        return num + arr[idx];
+    });
+    return sum;
+}
+
+function cumsum(x) { return x.map((sum = 0, n => sum += n)); }
+
+function daily_delta(x) {
+    var out = [0];
+    for (var i = 1; i < x.length; i++) {
+        out.push(x[i] - x[i-1]);
+    }
+    return out;
+}
+
+function add_day_delta(data, field, days, smoothing) {
+    const delta_field = days + " Day Delta of " + field;
+    if (typeof data[delta_field] === "undefined") {
+        const len = data["Date"].length;
+        data[delta_field] = [];
+        for (let i = 0; i < days; i++) {
+            data[delta_field].push(data[field][i] - data[field][0]);
+        }
+        for (let i = days; i < len; i++) {
+            data[delta_field].push(data[field][i] - data[field][i-days]);
+        }
+    }
+    return delta_field;
+}
+
+function add_sma(data, field, smoothing = 7, force = false) {
+    const field_sma = field + " (SMA " + smoothing + ")";
+    if (force || typeof data[field_sma] === "undefined") {
+        data[field_sma] = simple_moving_average(data[field], smoothing);
+    }
+    return field_sma;
+}
+
+function add_cumsum(data, field) {
+    const field_cs = "Cumulative " + field;
+    if (typeof data[field_cs] === "undefined") {
+        data[field_cs] = cumsum(data[field]);
+    }
+    return field_cs;
+}
+
+// All the fields which are functions of the raw data are added here. 
+function compute_derived(raw_data) {
+    const len = raw_data["Date"].length;
+    var data = raw_data;
+
+    data["Weight [kg]"] = data["Weight [lbs]"].map(n => 0.453592 * n);
+
+    data["Deficit [C]"] = hadamard_sum([
+        raw_data["Resting Energy [C]"], 
+        raw_data["Active Energy [C]"], 
+        raw_data["Food Energy [C]"]
+    ]);
+
+    data["Active Weight Change [lbs]"] = [];
+    data["Cumulative Dietary Weight Change [lbs]"] = [];
+    var x_sum = 0;
+    for (let i = 0; i < len; i++) {
+        const x = data["Active Energy [C]"][i] / 3500.0;
+        x_sum += x;
+        data["Active Weight Change [lbs]"].push(x);
+        data["Cumulative Dietary Weight Change [lbs]"].push(data["Weight [lbs]"][i] - data["Weight [lbs]"][0] - x_sum);
+    }
+
+
+    data["Expected Weight Change [lbs]"] = [];
+    add_cumsum(data, "Deficit [C]"); // need this one
+    for (let i = 0; i < len; i++) {
+        data["Expected Weight Change [lbs]"].push(data["Cumulative Deficit [C]"][i] / 3500.0);
+    }
+
+    data["Observed Weight Change [lbs]"] = [];
+    for (let i = 0; i < len; i++) {
+        data["Observed Weight Change [lbs]"].push(data["Weight [lbs]"][i] - data["Weight [lbs]"][0]);
+    }
+
+    data["Implied Deficit [C]"] = [...daily_delta(data["Weight [lbs]"])].map(el => { return el * 3500.0; });
+
+    data["Deficit Error [C]"] = hadamard_difference(data["Deficit [C]"], data["Implied Deficit [C]"]);
+
+    data["Anomalous Weight Change [lbs]"] = [];
+    for (let i = 0; i < len; i++) {
+        data["Anomalous Weight Change [lbs]"].push(data["Observed Weight Change [lbs]"][i] - data["Expected Weight Change [lbs]"][i]);
+    }
+
+    add_day_delta(data, "Weight [lbs]", 1);
+    add_day_delta(data, "Weight [lbs]", 7);
+    add_day_delta(data, "Weight [lbs]", 30);
+
+    return data;
+}
+
+function treatAsUTC(date) {
+    var result = new Date(date);
+    result.setMinutes(result.getMinutes() - result.getTimezoneOffset());
+    return result;
+}
+
+function daysBetween(startDate, endDate) {
+    var millisecondsPerDay = 24 * 60 * 60 * 1000;
+    return (treatAsUTC(endDate) - treatAsUTC(startDate)) / millisecondsPerDay;
+}
+
+function days_in_domain(domain) {
+    return daysBetween(domain[0], domain[1]);
+}
+
+function hide_personal() {
+    document.querySelectorAll(".csp").forEach(el => {el.innerHTML = "";});
+}
+
+function handle_files(input) {
+    hide_personal()
+    let file = input.files[0];
+    Papa.parse(file, {
+        complete: function(results) {
+            update(results.data);
+        }
+    });
+}
+</script>
+
+<button type="button" class="collapsible">Intro</button>
+<div class="content">
+<div class="csp"><p>
+I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
+</p></div>
+
+<p>Click on the headers to collapse them.</p>
+
+<p>"SMA" stands for "simple moving average". It's a trailing average over the indicated number of days, unless the proceeding window of valid data is too short.</p>
+
+<p>You can click on the legend to disable part of the plot.</p>
+
+<p>You can zoom in on the plots by selecting a region.</p>
+
+<p>You can also try with your own CSV file, <a href="Data-Raw.csv" target="_blank">formatted like this</a> (column order shouldn't matter). <input type="file" id="input"/ onchange="handle_files(this)" accept=".csv"></p>
+
+<p>You can alternatively host your CSV file somewhere and pass the path to it as a URL parameter, like so: https://csp256.github.io/fitness/index.html?csv=https://www.yourdomain.com/your_data.csv</p>
+</div>
+
+<button type="button" class="collapsible">Weight</button>
+<div class="content">
+    <a id="Weight"></a>
+    <div id="Weight_lbs"></div>
+
+    <a id="One_Day_Delta_of_Weight"></a>
+    <div id="One_Day_Delta_of_Weight_lbs"></div>
+
+    <a id="Seven_Day_Delta_of_Weight"></a>
+    <div id="Seven_Day_Delta_of_Weight_lbs"></div>
+
+    <a id="Thirty_Day_Delta_of_Weight"></a>
+    <div id="Thirty_Day_Delta_of_Weight_lbs"></div>
+
+    <a id="Cumulative_Active_Weight_Change"></a>
+    <div id="Cumulative_Active_Weight_Change_lbs"></div>
+    <div class="markdown">
+<p>Active weight change is the portion of weight change from all exercise, including daily exercise. This is probably an underestimate by about 10%. For more info see "Active Energy [C]" under the "Calorie" header.</p>
+
+<p>What I call dietary weight change is simply all the weight change not attributable to "active energy".</p>
+    </div>
+</div>
+
+
+
+<button type="button" class="collapsible">Macros</button>
+<div class="content">
+    <a id="Protein"></a>
+    <div id="Protein_g"></div>
+
+    <a id="Fat"></a>
+    <div id="Fat_g"></div>
+
+    <a id="Carbs"></a>
+    <div id="Carbs_g"></div>
+</div>
+
+
+
+<button type="button" class="collapsible">Exercise</button>
+<div class="content">
+    <a id="Walking"></a>
+    <div id="Walking_Steps"></div>
+
+    <a id="Walking2"></a>
+    <div id="Walking_mi"></div>
+    <div class="markdown">
+<div class="csp"><p>For most data points, if I walk or eat etc after midnight I make sure to correctly attribute that to the previous day. </p>
+
+<p>However, I initially only manually recorded <em>steps</em> but not <em>miles</em>. I do not have the ability to retroactively make that correction.</p>
+
+<p>Thus, this data is "unadjusted".</p></div>
+    </div>
+
+    <a id="Cumulative_Walking"></a>
+    <div id="Cumulative_Walking_mi"></div>
+</div>
+
+
+
+<button type="button" class="collapsible">Calories</button>
+<div class="content">
+    <a id="Daily_Calories"></a>
+    <div id="Daily_Calories_C"></div>
+    <div class="markdown">
+<div class="csp"><p>Active and resting energy are pulled from the Apple Health iPhone app. I don't have an Apple Watch. </p></div>
+    </div>
+
+    <a id="Deficit"></a>
+    <div id="Deficit_C"></div>
+
+    <a id="Food_Energy"></a>
+    <div id="Food_Energy_C"></div>
+
+    <a id="TDEE"></a>
+    <div id="TDEE_C"></div>
+
+    <a id="Active_Energy"></a>
+    <div id="Active_Energy_C"></div>
+    <div class="markdown">
+<p>When exercising, only a portion of the increase calorie burn falls under "active energy". The justification for this I am not 100% sure about. Resting energy will increase by about 10% of the active energy. </p>
+    </div>
+
+    <a id="Resting_Energy"></a>
+    <div id="Resting_Energy_C"></div>
+    <div class="markdown">
+<div class="csp"><p>Resting energy is also "unadjusted", like miles walked. As I often exercise after midnight, this means the recorded resting energy might be elevated the day <em>after</em> the actual exercise.</p></div>
+    </div>
+
+    <a id="Active_and_Deficit"></a>
+    <div id="Active_and_Deficit_C"></div>
+    <div class="markdown">
+<p></p>
+    </div>
+
+</div>
+
+
+
+<button type="button" class="collapsible">Analysis</button>
+<div class="content">
+    <a id="Observed_v_Expected"></a>
+    <div id="Observed_v_Expected_lbs"></div>
+    <div class="markdown">
+<p>Expected weight loss is calculated assuming the cumulative caloric deficit is satisfied entirely through fat catabolism. (3,500 Calories per pound of fat)</p>
+    </div>
+
+    <a id="Anomalous_Weight_Change"></a>
+    <div id="Anomalous_Weight_Change_lbs"></div>
+    <div class="markdown">
+<p>This is the discrepency between the simplistic "expected" weight loss and the actual observed weight loss.</p>
+
+<p>There's actually an off-by-one error on some of this logic I haven't bothered to fix because weight is measured before that day's exercise. It doesn't <em>really</em> matter though. </p>
+    </div>
+
+    <a id="Observed_v_Expected_Deficit"></a>
+    <div id="Observed_v_Expected_Deficit_C"></div>
+    <div class="markdown">
+<p>"Implied deficit" the caloric deficit implied from weight loss, assuming all weight lost is body fat. Note that the individual data points are toggled off by default, but can be toggled on.</p>
+    </div>
+
+    <a id="Deficit_Error"></a>
+    <div id="Deficit_Error_C"></div>
+    <div class="markdown">
+<p>This is the difference between the computed and implied caloric deficit. Positive numbers mean that weight loss was faster than expected, negative mean it was slower.</p>
+
+<p>Because the data is so noisy, this plot uses a 14 day moving average instead of the typical 7 day SMA.</p>
+    </div>
+</div>
+
+
+
+<button type="button" class="collapsible">Body Indexes</button>
+<div class="content">
+    <p>If you supplied your own CSV data, please input your height in centimeters: <input type="number" id="height_input" name="height_input" min="10" max="300" style="width:5em"> <button type="button" onclick='d["Height [m]"] = 0.01 * document.getElementById("height_input").value; plot_body_indexes(d)'>Update Plots</button> (Work in progress!)
+</p>
+
+    <a id="New_BMI"></a>
+    <div id="New_BMI_"></div>
+    <div class="markdown">
+<p>This is BMI (body mass index) but with improved handling of short and tall people. It is still a flawed metric with limited applicability. <a href="https://en.wikipedia.org/wiki/Body_mass_index#Children_and_youth" target="_blank">People under the age of 20 should read this.</a></p>
+    </div>
+
+    <a id="Old_BMI"></a>
+    <div id="Old_BMI_"></div>
+    <div class="markdown">
+<p>This is the BMI still in use by insurance companies and doctors. It can be very misleading for short or tall people, or people with a lot of muscle.</p>
+    </div>
+
+    <a id="Ponderal_Index"></a>
+    <div id="Ponderal_Index_"></div>
+    <div class="markdown">
+<p>Should be consistent for people past adolescence. <a href="https://en.wikipedia.org/wiki/Corpulence_index" target="_blank">Read more here.</a> The nominal range is 11 to 14 or 15.</p>
+    </div>
+
+<script>
+
+const palette = [
+        "rgba(31 119 180 255)",
+        "rgba(255 127 14 255)",
+        "rgba(44 160 44 255)",
+        "rgba(214 39 40 255)",
+    ];
+
+function plot_obj_set_options(obj, data) {
+    obj.clipPath = true;
+    obj.axis = {
+        x: {
+            type: "timeseries",
+            tick: {
+                centered: true,
+                fit: false,
+                count: 8,
+                multiline: false,
+                autorotate: true,
+                rotate: 90,
+                format: function(d) {
+                    return short_month_names[d.getMonth()] + " " + d.getDate();
+                },
+                culling: false,
+                outer: false,
+                values: data["Date"],
+            },
+        },
+        y: {
+            tick: {
+                outer: false,
+                format: function(s) { return s.toLocaleString(); }
+            },
+            padding: {
+                top: 10,
+                bottom: 10
+            }
+        },
+        y2: {
+            tick: {
+                outer: false,
+                format: function(s) { return s.toLocaleString(); }
+            },
+            show: true,
+        }
+    };
+
+    obj.scatter = {zerobased:true};
+    obj.line = {zerobased:true};
+
+    obj.grid = {
+        focus: {
+            show: true,
+            y: true,
+            edge: true
+        },
+        y: {
+            lines: [
+                {
+                    value: 0,
+                    text: ""
+                },
+            ],
+            show: true
+        }
+    };
+
+    obj.zoom = {
+        enabled: true,
+        type: "drag",
+        rescale: false,
+    };
+
+    obj.onrendered = function() {
+        const domain = this.internal.zoom.getDomain();
+        const days = days_in_domain(domain);
+
+        const tick_count = Math.max(2, Math.floor((document.body.clientWidth - 80) / 18));
+
+        const stride = Math.ceil(days / tick_count);
+
+        // find first and last valid date (yes this is janky as hell)
+        const len = this.internal.axis.x.config.tickValues.length;
+        let i = 0;
+        let first = 0;
+        for (; i < len; i++) {
+            if (domain[0] <= this.internal.axis.x.config.tickValues[i]) {
+                first = i;
+                break;
+            }
+        }
+        let last = Math.min(i, len-1);
+        for (; i < len; i++) {
+            if (domain[1] < this.internal.axis.x.config.tickValues[i]) {
+                break;
+            }
+            last = i;
+        }
+        last = Math.max(1, last);
+
+        // Without this offset we have a tendency for wasted padding on left or right
+        const offset = Math.ceil(((last) % stride) / 2);
+
+        d3.selectAll(this.internal.config.bindto + " .bb-axis-x .tick tspan").each(
+            function(v) {
+                if (first <= v.index && v.index <= last) {
+                    this.textContent = ((v.index % stride) == offset) 
+                        ? v.splitted
+                        : "";
+                } else {
+                    this.textContent = "";
+                }
+            }
+        );
+    }
+
+    obj.padding = true;
+
+    obj.title.padding = {
+        top:20,
+        bottom:5
+    };
+
+    obj.tooltip = {
+        order: null,
+        grouped: true,
+        format: {
+            title: function(d) { 
+                return d.toLocaleDateString(
+                    undefined, 
+                    { 
+                        weekday: 'short', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    }
+                );
+            },
+            value: function(value, ratio, id) { 
+                return value.toLocaleString(
+                    undefined, 
+                    { 
+                        maximumFractionDigits: 1 
+                    }
+                ); 
+            }
+        }
+    };
+}
+
+function plot_obj_observed_v_expected(data, fields, title, bindto) {
+    fields_sma = [...fields].map(el => { return add_sma(data, el) });
+
+    var obj = {
+        title: {
+            text: title
+        },
+        data: {
+            x: "x",
+            columns: [
+                [fields[0], ...data[fields[0]]],
+                [fields_sma[0], ...data[fields_sma[0]]],
+                [fields[1], ...data[fields[1]]],
+                [fields_sma[1], ...data[fields_sma[1]]],
+                ["x", ...data["Date"]]
+            ],
+            types: {},
+            colors: {}
+        },
+        bindto: bindto,
+    };
+    plot_obj_set_options(obj, data);
+
+    obj.data.types[fields[0]] = "scatter";
+    obj.data.types[fields_sma[0]] = "area";
+    obj.data.types[fields[1]] = "scatter";
+    obj.data.types[fields_sma[1]] = "area";
+
+    return obj;
+} // plot_obj_observed_v_expected
+
+function plot_obj_daily_calories(data) {
+    var obj = {
+        title: {
+            text: "Daily Calories [C]"
+        },
+        data: {
+            order: null,
+            x: "x",
+            columns: [
+                ["Resting Energy [C]", ...data["Resting Energy [C]"]],
+                ["Active Energy [C]", ...data["Active Energy [C]"]],
+                ["Food Energy [C]", ...data["Food Energy [C]"]],
+                ["x", ...data["Date"]],
+            ],
+            type: "bar",
+            types: {},
+            groups: [
+                ["Resting Energy [C]", "Active Energy [C]", "Food Energy [C]"]
+            ],
+        },
+        bindto: "#Daily_Calories_C",
+    };
+    plot_obj_set_options(obj, data);
+
+    return obj;
+} // plot_obj_daily_calories
+
+function plot_obj_tdee(data) {
+    const name = "TDEE [C]";
+    const fields = ["Resting Energy [C]", "Active Energy [C]"];
+
+    var obj = {
+        title: {
+            text: name
+        },
+        data: {
+            order: null,
+            x: "x",
+            columns: [
+                ["x", ...data["Date"]],
+            ],
+            type: "bar",
+            types: {},
+            groups: [fields],
+        },
+        bindto: "#" + to_id_name(name),
+    };
+    plot_obj_set_options(obj, data);
+
+    for (field of fields) {
+        obj.data.columns.push( [field, ...data[field]] );    
+    }
+
+    sum = [...data[fields[0]]];
+    for (let i = 1; i < fields.length; i++) {
+        sum = sum.SumArray(data[fields[i]]);
+    }
+    const sma = simple_moving_average(sum, 7);
+    const sma_name = name + " (SMA 7)";
+    obj.data.columns.push( [name, ...sum]);
+    obj.data.columns.push( [sma_name, ...sma]);
+    obj.data.types[name] = "scatter";
+    obj.data.types[sma_name] = "area";
+
+    return obj;
+} // plot_obj_tdee
+
+function plot_obj_cumulative(data, raw_field) {
+    const field = add_cumsum(data, raw_field);
+
+    var obj = {
+        title: {
+            text: field
+        },
+        data: {
+            x: "x",
+            columns: [
+                [field, ...data[field]],
+                ["x", ...data["Date"]]
+            ],
+            type: "area",
+        },
+        bindto: "#" + to_id_name(field),
+    };
+    plot_obj_set_options(obj, data);
+
+    return obj;
+} // plot_obj_cumulative
+
+function plot_obj_simple(data, field) {
+    var obj = {
+        title: {
+            text: field
+        },
+        data: {
+            x: "x",
+            columns: [
+                [field, ...data[field]],
+                ["x", ...data["Date"]]
+            ],
+            types: {},
+        },
+        bindto: "#" + to_id_name(String(field)),
+    };
+    plot_obj_set_options(obj, data);
+
+    obj.data.types[field] = "area-spline";
+    return obj;
+} // plot_obj
+
+function plot_obj(data, field, smoothing = 7) {
+    const field_sma = field + " (SMA " + smoothing + ")";
+    if (typeof data[field_sma] === "undefined") {
+        add_sma(data, field, smoothing);
+    }
+
+    var obj = {
+        title: {
+            text: field
+        },
+        data: {
+            x: "x",
+            columns: [
+                [field, ...data[field]],
+                [field_sma, ...data[field_sma]],
+                ["x", ...data["Date"]]
+            ],
+            types: {},
+            color: {},
+            colors: {}
+        },
+        bindto: "#" + to_id_name(field),
+    };
+    plot_obj_set_options(obj, data);
+
+    obj.data.types[field] = "scatter";
+    obj.data.types[field_sma] = "area";
+
+    return obj;
+} // plot_obj
+
+var d;
+var charts = {};
+function update(results) {
+    const raw_data = transpose(results);
+    const data = compute_derived(raw_data);
+    d = data;
+
+    { // Weight
+        var weight = plot_obj(data, "Weight [lbs]");
+        weight.axis.y.min = arrayMin(data["Weight [lbs]"]) - 5;
+        charts["Weight [lbs]"] = bb.generate(weight);
+
+        var delta = plot_obj(data, "1 Day Delta of Weight [lbs]");
+        var filt1 = data["1 Day Delta of Weight [lbs]"].map((
+            e = new OneEuroFilter(1, 0.01, 0.05, 1.),
+            n => e.filter(n)
+        ));
+        delta.data.columns.push(["Test of OneEuroFilter", ...filt1]);
+        delta.data.types["Test of OneEuroFilter"] = "area";
+        charts["1 Day Delta of Weight [lbs]"] = bb.generate(delta).toggle("Test of OneEuroFilter");
+
+        var weekly = plot_obj(data, "7 Day Delta of Weight [lbs]");
+        var e = new OneEuroFilter(20, 1, 0.031, 1);
+        // var e = new OneEuroFilter(1, 0.05, 0.1);
+        // var e = new OneEuroFilter(1, 0.2, 0, 1);
+        var filt2 = []
+        for (let i = 0; i < data["Date"].length; i++) {
+            filt2.push(e.filter(data["7 Day Delta of Weight [lbs]"][i]));
+        }
+        weekly.data.columns.push(["Test of OneEuroFilter", ...filt2]);
+        // filt22 = data["7 Day Delta of Weight [lbs]"].map((
+        //     e = new OneEuroFilter(1, 0.05, 0.031, 1),
+        //     n => e.filter(n)
+        // ));
+        // weekly.data.columns.push(["Test of OneEuroFilter2", ...filt22]);
+        weekly.data.types["Test of OneEuroFilter"] = "area";
+        charts["7 Day Delta of Weight [lbs]"] = bb.generate(weekly).toggle("Test of OneEuroFilter");
+
+        var monthly = plot_obj(data, "30 Day Delta of Weight [lbs]");
+        var filt3 = data["30 Day Delta of Weight [lbs]"].map((
+            e = new OneEuroFilter(1, 0.02, .1, 1),
+            n => e.filter(n)
+        ));
+        monthly.data.columns.push(["Test of OneEuroFilter", ...filt3]);
+        monthly.data.types["Test of OneEuroFilter"] = "area";
+        bb.generate(monthly).toggle("Test of OneEuroFilter");
+
+        var components = plot_obj_cumulative(data, "Active Weight Change [lbs]");
+        components.data.columns.push([
+            "Cumulative Dietary Weight Change [lbs]", 
+            ...data["Cumulative Dietary Weight Change [lbs]"]]);
+        console.log(components);
+        components.data.groups = [["Cumulative Active Weight Change [lbs]", "Cumulative Dietary Weight Change [lbs]"]];
+        components.zoom.rescale = true;
+        bb.generate(components);
+    }
+
+    { // Nutrition
+        var protein = plot_obj(data, "Protein [g]");
+        bb.generate(protein);
+
+        var fat = plot_obj(data, "Fat [g]");
+        charts["Fat [g]"] = bb.generate(fat);
+
+        var carbs = plot_obj(data, "Carbs [g]");
+        bb.generate(carbs);
+    }
+
+    { // Exercise 
+        var steps = plot_obj(data, "Walking [Steps]");
+        var step_format = function (s) { return (s/1000).toLocaleString() + "k"; };
+        steps.axis.y.tick.format = step_format;
+        steps.axis.y2.tick.format = step_format;
+        bb.generate(steps);
+
+        var miles = plot_obj(data, "Walking [mi]");
+        bb.generate(miles);
+
+        var cumulative_miles = plot_obj_cumulative(data, "Walking [mi]");
+        bb.generate(cumulative_miles);
+    }
+
+    { // Calories
+        var daily_calories = plot_obj_daily_calories(data);
+        bb.generate(daily_calories);
+
+        var deficit = plot_obj(data, "Deficit [C]");
+        bb.generate(deficit);
+
+        var calories = plot_obj(data, "Food Energy [C]");
+        bb.generate(calories);
+
+        var tdee = plot_obj_tdee(data);
+        bb.generate(tdee).toggle("TDEE [C]");
+
+        var active = plot_obj(data, "Active Energy [C]");
+        // active.axis.y.padding.bottom = 10;
+        bb.generate(active);
+
+        var resting = plot_obj(data, "Resting Energy [C]");
+        // resting.axis.y.padding.bottom = 10;
+        bb.generate(resting).axis.range({
+            max:arrayMax(data["Resting Energy [C]"]),
+            min:arrayMin(data["Resting Energy [C]"])
+        });
+
+        var perc = plot_obj(data, "Active Energy [C]");
+        perc.data.types["Active Energy [C] (SMA 7)"] = "line";
+        perc.data.columns.push(["Deficit [C]", ...data["Deficit [C]"]]);
+        perc.data.columns.push(["Deficit [C] (SMA 7)", ...data["Deficit [C] (SMA 7)"]])
+        perc.data.columns.push([
+            "Ratio of Active (SMA) to Deficit (SMA)", 
+            ...hadamard_quotient(data["Active Energy [C] (SMA 7)"], data["Deficit [C] (SMA 7)"])])
+        perc.data.types["Deficit [C]"] = "scatter";
+        perc.data.types["Ratio of Active (SMA) to Deficit (SMA)"] = "area";
+        perc.title.text = "Active and Deficit [C]";
+        perc.bindto = "#Active_and_Deficit_C";
+        perc.zoom.rescale = true;
+        bb.generate(perc).toggle("Ratio of Active (SMA) to Deficit (SMA)");
+
+    }
+
+    { // Analysis
+        var weight_comparison = plot_obj_observed_v_expected(
+            data, 
+            [
+                "Observed Weight Change [lbs]",
+                "Expected Weight Change [lbs]"
+            ], 
+            "Observed & Expected Weight Change [lbs]",
+            "#Observed_v_Expected_lbs");
+        bb.generate(weight_comparison);
+
+        var anomalous = plot_obj(data, "Anomalous Weight Change [lbs]");
+        bb.generate(anomalous);
+
+        var deficit_comparison = plot_obj_observed_v_expected(
+            data, 
+            [
+                "Deficit [C]",
+                "Implied Deficit [C]"
+            ],
+            "Computed & Implied Deficit [C]", 
+            "#Observed_v_Expected_Deficit_C",
+            {
+                toggle_scatter: true
+            }
+        );
+        deficit_comparison_plot = bb.generate(deficit_comparison);
+        deficit_comparison_plot.toggle("Deficit [C]");
+        deficit_comparison_plot.toggle("Implied Deficit [C]");
+
+        var deficit_error = plot_obj(data, "Deficit Error [C]", 14);
+        charts["Deficit Error [C]"] = bb.generate(deficit_error).toggle("Deficit Error [C]");
+    }
+
+    { // Body Indexes
+        plot_body_indexes(data);
+    }
+}
+
+function plot_body_indexes(data) {
+    data["New BMI"] = data["Weight [kg]"].map((
+        scalar = 1.0 / Math.pow(data["Height [m]"], 2.5),
+        n => n * scalar));
+
+    data["Old BMI"] = data["Weight [kg]"].map((
+        scalar = 1.0 / Math.pow(data["Height [m]"], 2),
+        n => n * scalar));
+
+    data["Ponderal Index"] = data["Weight [kg]"].map((
+        scalar = 1.0 / Math.pow(data["Height [m]"], 3),
+        n => n * scalar));
+
+    const spread = 0.5;
+    if (typeof this.first_time === "undefined") {
+        this.first_time = false;
+        function plot_body_index(data, field) {
+            var obj = plot_obj(data, field);
+            // document.getElementById(to_id_name(field) + "_").innerHTML = "";
+            obj.bindto += "_";
+            obj.axis.y.min = arrayMin(data[field]) - spread;
+            obj.axis.y.max = arrayMax(data[field]) + spread;
+            charts[field] = bb.generate(obj);
+        }
+        plot_body_index(data, "New BMI");
+        plot_body_index(data, "Old BMI");
+        plot_body_index(data, "Ponderal Index");
+    } else {
+        function update_body_index(field) {
+            field_sma = add_sma(data, field, 7, true);
+            charts[field].config("axis.y.min", arrayMin(data[field]) - spread, false);
+            charts[field].config("axis.y.max", arrayMax(data[field]) + spread, false);
+            // https://naver.github.io/billboard.js/release/latest/doc/Chart.html#load
+            charts[field].load( 
+                {
+                    columns:[
+                        [field, ...data[field]],
+                        [field_sma, ...data[field_sma]]
+                    ],
+                    resizeAfter: true
+                }
+            );
+        }
+        update_body_index("New BMI");
+        update_body_index("Old BMI");
+        update_body_index("Ponderal Index");
+    }
+
+}
+
+function main() {
+    const url_params = new URLSearchParams(window.location.search);
+    let csv = url_params.get('csv');
+    if (csv == null) {
+        csv = "Data-Raw.csv";
+    } else {
+        hide_personal();
+    }
+
+    const f = Papa.parse(csv, {
+        download: true,
+        complete: function(results, file) {
+            update(results.data);
+        } 
+    });
+}
+main()
+collapsible();
+</script>
+</body>
+</html>
