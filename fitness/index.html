@@ -327,6 +327,17 @@ function hadamard_difference(a, b) {
     return output;
 }
 
+function hadamard_quotient(a, b) {
+    const len = a.length;
+    let output = [...a];
+    for (let i = 0; i < len; i++) {
+        output[i] /= b[i];
+    }
+    return output;    
+}
+
+
+
 Array.prototype.SumArray = function (arr) {
     var sum = this.map(function (num, idx) {
         return num + arr[idx];
@@ -563,6 +574,13 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
     <div class="markdown">
 <div class="csp"><p>Resting energy is also "unadjusted", like miles walked. As I often exercise after midnight, this means the recorded resting energy might be elevated the day <em>after</em> the actual exercise.</p></div>
     </div>
+
+    <a id="Active_and_Deficit"></a>
+    <div id="Active_and_Deficit_C"></div>
+    <div class="markdown">
+<p></p>
+    </div>
+
 </div>
 
 
@@ -864,7 +882,9 @@ function plot_obj_tdee(data) {
     }
     const sma = simple_moving_average(sum, 7);
     const sma_name = name + " (SMA 7)";
+    obj.data.columns.push( [name, ...sum]);
     obj.data.columns.push( [sma_name, ...sma]);
+    obj.data.types[name] = "scatter";
     obj.data.types[sma_name] = "area";
 
     return obj;
@@ -1037,7 +1057,7 @@ function update(results) {
         bb.generate(calories);
 
         var tdee = plot_obj_tdee(data);
-        bb.generate(tdee);
+        bb.generate(tdee).toggle("TDEE [C]");
 
         var active = plot_obj(data, "Active Energy [C]");
         // active.axis.y.padding.bottom = 10;
@@ -1049,6 +1069,21 @@ function update(results) {
             max:arrayMax(data["Resting Energy [C]"]),
             min:arrayMin(data["Resting Energy [C]"])
         });
+
+        var perc = plot_obj(data, "Active Energy [C]");
+        perc.data.types["Active Energy [C] (SMA 7)"] = "line";
+        perc.data.columns.push(["Deficit [C]", ...data["Deficit [C]"]]);
+        perc.data.columns.push(["Deficit [C] (SMA 7)", ...data["Deficit [C] (SMA 7)"]])
+        perc.data.columns.push([
+            "Ratio of Active (SMA) to Deficit (SMA)", 
+            ...hadamard_quotient(data["Active Energy [C] (SMA 7)"], data["Deficit [C] (SMA 7)"])])
+        perc.data.types["Deficit [C]"] = "scatter";
+        perc.data.types["Ratio of Active (SMA) to Deficit (SMA)"] = "area";
+        perc.title.text = "Active and Deficit [C]";
+        perc.bindto = "#Active_and_Deficit_C";
+        perc.zoom.rescale = true;
+        bb.generate(perc).toggle("Ratio of Active (SMA) to Deficit (SMA)");
+
     }
 
     { // Analysis
