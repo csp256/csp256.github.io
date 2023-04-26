@@ -575,10 +575,10 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 <div class="csp"><p>Resting energy is also "unadjusted", like miles walked. As I often exercise after midnight, this means the recorded resting energy might be elevated the day <em>after</em> the actual exercise.</p></div>
     </div>
 
-    <a id="Active_and_Deficit"></a>
-    <div id="Active_and_Deficit_C"></div>
+    <a id="Compare_Active_to_Deficit"></a>
+    <div id="Compare_Active_to_Deficit_C"></div>
     <div class="markdown">
-<p></p>
+<p>To get the ratio to display properly, toggle it on but toggle off all other data on this plot. Note this will flip the y axis. :)</p>
     </div>
 
 </div>
@@ -1079,11 +1079,10 @@ function update(results) {
             ...hadamard_quotient(data["Active Energy [C] (SMA 7)"], data["Deficit [C] (SMA 7)"])])
         perc.data.types["Deficit [C]"] = "scatter";
         perc.data.types["Ratio of Active (SMA) to Deficit (SMA)"] = "area";
-        perc.title.text = "Active and Deficit [C]";
-        perc.bindto = "#Active_and_Deficit_C";
+        perc.title.text = "Compare Active to Deficit [C]";
+        perc.bindto = "#Compare_Active_to_Deficit_C";
         perc.zoom.rescale = true;
         bb.generate(perc).toggle("Ratio of Active (SMA) to Deficit (SMA)");
-
     }
 
     { // Analysis
