@@ -389,9 +389,15 @@ function compute_derived(raw_data) {
     ]);
 
     data["Active Weight Change [lbs]"] = [];
+    data["Cumulative Dietary Weight Change [lbs]"] = [];
+    var x_sum = 0;
     for (let i = 0; i < len; i++) {
-        data["Active Weight Change [lbs]"].push( data["Active Energy [C]"][i] / 3500.0);
+        const x = data["Active Energy [C]"][i] / 3500.0;
+        x_sum += x;
+        data["Active Weight Change [lbs]"].push(x);
+        data["Cumulative Dietary Weight Change [lbs]"].push(data["Weight [lbs]"][i] - data["Weight [lbs]"][0] - x_sum);
     }
+
 
     data["Expected Weight Change [lbs]"] = [];
     add_cumsum(data, "Deficit [C]"); // need this one
@@ -486,7 +492,9 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
     <a id="Cumulative_Active_Weight_Change"></a>
     <div id="Cumulative_Active_Weight_Change_lbs"></div>
     <div class="markdown">
-<p>Portion of weight change from exercise. This is probably an underestimate by about 10%. For more info see "Active Energy [C]" under the "Calorie" header.</p>
+<p>Active weight change is the portion of weight change from all exercise, including daily exercise. This is probably an underestimate by about 10%. For more info see "Active Energy [C]" under the "Calorie" header.</p>
+
+<p>What I call dietary weight change is simply all the weight change not attributable to "active energy".</p>
     </div>
 </div>
 
@@ -949,27 +957,48 @@ function update(results) {
         charts["Weight [lbs]"] = bb.generate(weight);
 
         var delta = plot_obj(data, "1 Day Delta of Weight [lbs]");
-        charts["1 Day Delta of Weight [lbs]"] = bb.generate(delta);
+        var filt1 = data["1 Day Delta of Weight [lbs]"].map((
+            e = new OneEuroFilter(1, 0.01, 0.05, 1.),
+            n => e.filter(n)
+        ));
+        delta.data.columns.push(["Test of OneEuroFilter", ...filt1]);
+        delta.data.types["Test of OneEuroFilter"] = "area";
+        charts["1 Day Delta of Weight [lbs]"] = bb.generate(delta).toggle("Test of OneEuroFilter");
 
         var weekly = plot_obj(data, "7 Day Delta of Weight [lbs]");
-        var e = new OneEuroFilter(20, 1, 0.1);
-        var filt = []
+        var e = new OneEuroFilter(20, 1, 0.031, 1);
+        // var e = new OneEuroFilter(1, 0.05, 0.1);
+        // var e = new OneEuroFilter(1, 0.2, 0, 1);
+        var filt2 = []
         for (let i = 0; i < data["Date"].length; i++) {
-            filt.push(e.filter(data["7 Day Delta of Weight [lbs]"][i]));
+            filt2.push(e.filter(data["7 Day Delta of Weight [lbs]"][i]));
         }
-        // filt2 = data["7 Day Delta of Weight [lbs]"].map((
-        //     e = new OneEuroFilter(3, 1, 0.),
+        weekly.data.columns.push(["Test of OneEuroFilter", ...filt2]);
+        // filt22 = data["7 Day Delta of Weight [lbs]"].map((
+        //     e = new OneEuroFilter(1, 0.05, 0.031, 1),
         //     n => e.filter(n)
         // ));
-        weekly.data.columns.push(["Test of OneEuroFilter", ...filt]);
-        // weekly.data.columns.push(["Test of OneEuroFilter2", ...filt2]);
+        // weekly.data.columns.push(["Test of OneEuroFilter2", ...filt22]);
+        weekly.data.types["Test of OneEuroFilter"] = "area";
         charts["7 Day Delta of Weight [lbs]"] = bb.generate(weekly).toggle("Test of OneEuroFilter");
 
         var monthly = plot_obj(data, "30 Day Delta of Weight [lbs]");
-        bb.generate(monthly);
+        var filt3 = data["30 Day Delta of Weight [lbs]"].map((
+            e = new OneEuroFilter(1, 0.02, .1, 1),
+            n => e.filter(n)
+        ));
+        monthly.data.columns.push(["Test of OneEuroFilter", ...filt3]);
+        monthly.data.types["Test of OneEuroFilter"] = "area";
+        bb.generate(monthly).toggle("Test of OneEuroFilter");
 
-        var cumulative_active = plot_obj_cumulative(data, "Active Weight Change [lbs]");
-        bb.generate(cumulative_active);
+        var components = plot_obj_cumulative(data, "Active Weight Change [lbs]");
+        components.data.columns.push([
+            "Cumulative Dietary Weight Change [lbs]", 
+            ...data["Cumulative Dietary Weight Change [lbs]"]]);
+        console.log(components);
+        components.data.groups = [["Cumulative Active Weight Change [lbs]", "Cumulative Dietary Weight Change [lbs]"]];
+        components.zoom.rescale = true;
+        bb.generate(components);
     }
 
     { // Nutrition
