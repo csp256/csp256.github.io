@@ -105,11 +105,24 @@ function compute_derived(raw_data) {
     add_day_delta(data, "Weight [lbs]", 7);
     add_day_delta(data, "Weight [lbs]", 30);
 
+    let ratio_as_percent = function(a, b) {
+        return hadamard_quotient(a, b).map(el => { return el * 100.0; });
+    }
+
+    data["7 Day Delta of Weight [%]"] = ratio_as_percent(
+            data["7 Day Delta of Weight [lbs]"],
+            data["Weight [lbs]"]);  // linearization error is much smaller than measurement noise
+
+    // The effect of sex, age and race on estimating percentage body fat from body mass index: The Heritage Family Study.
+    // body_fat_percentage = (1.39 * BMI) + (0.16 * Age) - (10.34 * S) - 9
+    // S = 1 for male and 0 for female.
+
+    data["Ratio of Active to Deficit [%]"] = ratio_as_percent(
+            data["Active Energy [C]"],
+            data["Deficit [C]"]);
+
     return data;
 }
-
-
-
 
 // ██    ██ ██████  ██████   █████  ████████ ███████     ██████   █████  ████████  █████  
 // ██    ██ ██   ██ ██   ██ ██   ██    ██    ██          ██   ██ ██   ██    ██    ██   ██ 
@@ -141,21 +154,12 @@ function add_sma(data, field, smoothing = 7, force = false) {
 }
 
 function add_cumulative_sum(data, field) {
-    console.log(data)
-    console.log(field)
     const field_cs = "Cumulative " + field;
     if (typeof data[field_cs] === "undefined") {
         data[field_cs] = cumulative_sum(data[field]);
     }
     return field_cs;
 }
-
-// const palette = [
-//     "rgba(31 119 180 255)",
-//     "rgba(255 127 14 255)",
-//     "rgba(44 160 44 255)",
-//     "rgba(214 39 40 255)",
-//     ];
 
 // ███    ███  █████  ██ ███    ██ 
 // ████  ████ ██   ██ ██ ████   ██ 

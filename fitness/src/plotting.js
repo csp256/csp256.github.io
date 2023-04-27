@@ -6,8 +6,11 @@
 // ███████ ██   ██    ██    ███████ ██   ████ ██████      ██      ███████  ██████     ██    
 
 function extend_timeseries_plot(plot) {
-    plot.toggle_last = function() {
-        this.toggle(this.external.config.userconfig.last_field_added);
+    plot.toggle_last = function(n = 1) {
+        let fields = this.external.userconfig.field_add_order.slice(-n);
+        for (let field of fields) {
+            this.toggle(field);
+        }
         return this;
     }
 }
@@ -24,7 +27,7 @@ function extend_timeseries_config(obj) {
     obj.userconfig = {
         type: "",
         sma_type: "",
-        last_field_added: "",
+        field_add_order: [],
     }
 
     let get_default_add_options = function() { 
@@ -55,7 +58,7 @@ function extend_timeseries_config(obj) {
     obj.add = function(field, specified_options = {}) {
         const options = get_options(specified_options);
 
-        this.userconfig.last_field_added = field;
+        this.userconfig.field_add_order.push(field);
         if (obj.title.text === "") {
             obj.title.text = field;
         }
@@ -73,7 +76,7 @@ function extend_timeseries_config(obj) {
             obj.data.columns.push( [field_sma, ...obj.userdata[field_sma]] );
             obj.fields.push(field_sma);
             obj.data.types[field_sma] = options.sma_type;
-            this.userconfig.last_field_added = field_sma;
+            this.userconfig.field_add_order.push(field_sma);
         }
         return this;
     }
@@ -145,7 +148,6 @@ function extend_timeseries_config(obj) {
 
     obj.set_bindto_from_title = function() {
         this.bindto = "#" + to_id_name(this.title.text);
-        console.log(this.bindto)
         return this;
     }
 
@@ -193,8 +195,8 @@ function config_plot(data, type = "timeseries") {
     obj.bindto = "";
 
     const y_formatter = function(x) { 
-        return (1000 <= x) 
-            ? ((x/1000.0).toLocaleString() + "k")
+        return (x <= -1000 || 1000 <= x) 
+            ? ((x/1000.0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 2 }) + " k")
             : x.toLocaleString(); 
     };
 
@@ -587,8 +589,15 @@ function update(results) {
 
     { // Weight
         config_plot(data).add("Weight [lbs]").y_min_pad(5).done();
-        config_plot(data).add("1 Day Delta of Weight [lbs]").done();
-        config_plot(data).add("7 Day Delta of Weight [lbs]").done();
+        // TODO: create add() parameter for adding backward_difference
+        config_plot(data).add("1 Day Delta of Weight [lbs]").done(); 
+
+        config_plot(data)
+            .add("7 Day Delta of Weight [lbs]")
+            .add("7 Day Delta of Weight [%]")
+            .done()
+            .toggle_last(2);
+
         config_plot(data).add("30 Day Delta of Weight [lbs]").done();
 
         config_plot(data)
@@ -632,21 +641,16 @@ function update(results) {
         config_plot(data).add("Active Energy [C]").done();
         config_plot(data).add("Resting Energy [C]").y_pad(0).done();
 
-        data["Ratio of Active (SMA) to Deficit (SMA)"] = 
-            hadamard_quotient(
-                data["Active Energy [C] (SMA 7)"],
-                data["Deficit [C] (SMA 7)"]
-            );
         config_plot(data)
             .set_title("Compare Active to Deficit [C]")
             .set_sma_type("line")
             .add("Active Energy [C]")
             .add("Deficit [C]")
-            .add("Ratio of Active (SMA) to Deficit (SMA)", {smoothing:0, type:"area"})
+            .add("Ratio of Active to Deficit [%]")
             .set_bindto("#Compare_Active_to_Deficit_C")
             .rescale()
             .done()
-            .toggle_last();
+            .toggle_last(2);
     }
 
     { // Analysis
