@@ -1,0 +1,59 @@
+/*
+Sublime default color scheme:
+dark grey   rgb(48, 56, 65)
+white       rgb(216 222 233)
+red         rgb(236 95 102)
+green       rgb(153 199 148)
+teal        rgb(95 180 180)
+grey        rgb(132 139 149)
+purple      rgb(198 149 198)
+yellow      rgb(249 174 88)
+blue        rgb(102 153 204)
+green       rgb(153 199 148
+orange      rgb(248 123 88)
+
+light gray header rgb(79 86 94)
+dark gray footer rgb(46 50 56)
+
+default bb color pallete: 
+31 119 180
+255 127 14
+44 160 44
+214 39 40
+*/
+
+body {
+    background-color: rgb(48, 56, 65);
+    color: rgb(216, 222, 233);
+}
+
+a {
+    color: rgb(102 153 204)
+}
+
+/* Style the button that is used to open and close the collapsible content */
+.collapsible {
+    background-color: rgb(46 50 56); /*rgb(79 86 94);*/ /*rgb(132 139 149);*/
+    color: rgb(95 180 180);
+    cursor: pointer;
+    padding: 18px;
+    padding-left: 15%;
+    width: 100%;
+    border: none;
+    text-align: left;
+    outline: none;
+    font-size: 1.6em;
+    font-family: monospace, monospace;
+}
+
+/* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+/*.active, */.collapsible:hover {
+    color: rgb(236 95 102);
+}
+
+/* Style the collapsible content.  */
+.content {
+    padding: 0 18px;
+    overflow: hidden;
+    background-color: rgb(48, 56, 65);
+}
