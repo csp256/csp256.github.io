@@ -682,7 +682,7 @@ function update(results) {
         deficit_comparison_plot.toggle("Deficit [C]");
         deficit_comparison_plot.toggle("Implied Deficit [C]");
 
-        config_plot(data).add("Deficit Error [C]", 14).done().toggle("Deficit Error [C]");
+        config_plot(data).add("Deficit Error [C]", 14).done();
     }
 
     { // Body Indexes
