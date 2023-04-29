@@ -17,8 +17,10 @@
     <script src="lib/num_to_words.js"></script> 
 
     <script src="src/main.js"></script>
-    <script src="src/plotting.js"></script>
     <script src="src/utils.js"></script>
+    <script src="src/fitplot/fitplot.js"></script>
+    <script src="src/fitplot/timeseries.js"></script>
+    <script src="src/plotting.js"></script>
     <script src="src/DOM.js"></script>
 
     <link rel="stylesheet" href="style/billboard.css">
@@ -56,6 +58,8 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 <p>You can also try with your own CSV file, <a href="Data-Raw.csv" target="_blank">formatted like this</a> (column order shouldn't matter). <input type="file" id="input"/ onchange="handle_files(this)" accept=".csv"></p>
 
 <p>You can alternatively host your CSV file somewhere and pass the path to it as a URL parameter, like so: https://csp256.github.io/fitness/index.html?csv=https://www.yourdomain.com/your_data.csv</p>
+
+<!-- <p>Experimental Apple Health upload: <input type="file" id="input" onchange="load_apple_health(this)" accept=".xml"/></p> -->
 </div>
 
 <!-- 
@@ -72,16 +76,16 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
     <div id="Weight_lbs"></div>
 
     <a id="One_Day_Delta_of_Weight"></a>
-    <div id="One_Day_Delta_of_Weight_lbs"></div>
+    <div id="One_Day_Delta_of_Weight_lbs" class="fitplot"></div>
 
     <a id="Seven_Day_Delta_of_Weight"></a>
-    <div id="Seven_Day_Delta_of_Weight_lbs"></div>
+    <div id="Seven_Day_Delta_of_Weight_lbs" class="fitplot"></div>
 
     <a id="Thirty_Day_Delta_of_Weight"></a>
-    <div id="Thirty_Day_Delta_of_Weight_lbs"></div>
+    <div id="Thirty_Day_Delta_of_Weight_lbs" class="fitplot"></div>
 
     <a id="Cumulative_Active_Weight_Change"></a>
-    <div id="Cumulative_Active_Weight_Change_lbs"></div>
+    <div id="Cumulative_Active_Weight_Change_lbs" class="fitplot"></div>
     <div class="markdown">
 <p>Active weight change is the portion of weight change from all exercise, including daily exercise. This is probably an underestimate by about 10%. For more info see "Active Energy [C]" under the "Calorie" header.</p>
 
@@ -100,13 +104,13 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 <button type="button" class="collapsible">Macros</button>
 <div class="content">
     <a id="Protein"></a>
-    <div id="Protein_g"></div>
+    <div id="Protein_g" class="fitplot"></div>
 
     <a id="Fat"></a>
-    <div id="Fat_g"></div>
+    <div id="Fat_g" class="fitplot"></div>
 
     <a id="Carbs"></a>
-    <div id="Carbs_g"></div>
+    <div id="Carbs_g" class="fitplot"></div>
 </div>
 
 <!-- 
@@ -120,12 +124,12 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 <button type="button" class="collapsible">Exercise</button>
 <div class="content">
     <a id="Walking"></a>
-    <div id="Walking_Steps"></div>
+    <div id="Walking_Steps" class="fitplot"></div>
 
     <a id="Walking2"></a>
-    <div id="Walking_mi"></div>
+    <div id="Walking_mi" class="fitplot"></div>
     <div class="markdown">
-<div class="csp"><p>For most data points, if I walk or eat etc after midnight I make sure to correctly attribute that to the previous day. </p>
+<div class="csp"><p>For most data points, if I walk or eat etc after midnight I make sure to correctly attribute that to the previous day.</p>
 
 <p>However, I initially only manually recorded <em>steps</em> but not <em>miles</em>. I do not have the ability to retroactively make that correction.</p>
 
@@ -133,7 +137,7 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
     </div>
 
     <a id="Cumulative_Walking"></a>
-    <div id="Cumulative_Walking_mi"></div>
+    <div id="Cumulative_Walking_mi" class="fitplot"></div>
 </div>
 
 <!-- 
@@ -147,34 +151,34 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 <button type="button" class="collapsible">Calories</button>
 <div class="content">
     <a id="Daily_Calories"></a>
-    <div id="Daily_Calories_C"></div>
+    <div id="Daily_Calories_C" class="fitplot"></div>
     <div class="markdown">
 <div class="csp"><p>Active and resting energy are pulled from the Apple Health iPhone app. I don't have an Apple Watch. </p></div>
     </div>
 
     <a id="Deficit"></a>
-    <div id="Deficit_C"></div>
+    <div id="Deficit_C" class="fitplot"></div>
 
     <a id="Food_Energy"></a>
-    <div id="Food_Energy_C"></div>
+    <div id="Food_Energy_C" class="fitplot"></div>
 
     <a id="TDEE"></a>
-    <div id="TDEE_C"></div>
+    <div id="TDEE_C" class="fitplot"></div>
 
     <a id="Active_Energy"></a>
-    <div id="Active_Energy_C"></div>
+    <div id="Active_Energy_C" class="fitplot"></div>
     <div class="markdown">
 <p>When exercising, only a portion of the increase calorie burn falls under "active energy". The justification for this I am not 100% sure about. Resting energy will increase by about 10% of the active energy. </p>
     </div>
 
     <a id="Resting_Energy"></a>
-    <div id="Resting_Energy_C"></div>
+    <div id="Resting_Energy_C" class="fitplot"></div>
     <div class="markdown">
 <div class="csp"><p>Resting energy is also "unadjusted", like miles walked. As I often exercise after midnight, this means the recorded resting energy might be elevated the day <em>after</em> the actual exercise.</p></div>
     </div>
 
     <a id="Compare_Active_to_Deficit"></a>
-    <div id="Compare_Active_to_Deficit_C"></div>
+    <div id="Compare_Active_to_Deficit_C" class="fitplot"></div>
     <div class="markdown">
 <p>To get the ratio to display properly, toggle it on but toggle off all other data on this plot. Note this will flip the y axis. :)</p>
     </div>
@@ -192,13 +196,13 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 <button type="button" class="collapsible">Analysis</button>
 <div class="content">
     <a id="Observed_v_Expected"></a>
-    <div id="Observed_v_Expected_lbs"></div>
+    <div id="Observed_v_Expected_lbs" class="fitplot"></div>
     <div class="markdown">
 <p>Expected weight loss is calculated assuming the cumulative caloric deficit is satisfied entirely through fat catabolism. (3,500 Calories per pound of fat)</p>
     </div>
 
     <a id="Anomalous_Weight_Change"></a>
-    <div id="Anomalous_Weight_Change_lbs"></div>
+    <div id="Anomalous_Weight_Change_lbs" class="fitplot"></div>
     <div class="markdown">
 <p>This is the discrepency between the simplistic "expected" weight loss and the actual observed weight loss.</p>
 
@@ -206,13 +210,13 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
     </div>
 
     <a id="Observed_v_Expected_Deficit"></a>
-    <div id="Observed_v_Expected_Deficit_C"></div>
+    <div id="Observed_v_Expected_Deficit_C" class="fitplot"></div>
     <div class="markdown">
 <p>"Implied deficit" the caloric deficit implied from weight loss, assuming all weight lost is body fat. Note that the individual data points are toggled off by default, but can be toggled on.</p>
     </div>
 
     <a id="Deficit_Error"></a>
-    <div id="Deficit_Error_C"></div>
+    <div id="Deficit_Error_C" class="fitplot"></div>
     <div class="markdown">
 <p>This is the difference between the computed and implied caloric deficit. Positive numbers mean that weight loss was faster than expected, negative mean it was slower.</p>
 
@@ -234,19 +238,19 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 </p>
 
     <a id="New_BMI"></a>
-    <div id="New_BMI_"></div>
+    <div id="New_BMI_" class="fitplot"></div>
     <div class="markdown">
 <p>This is BMI (body mass index) but with improved handling of short and tall people. It is still a flawed metric with limited applicability. <a href="https://en.wikipedia.org/wiki/Body_mass_index#Children_and_youth" target="_blank">People under the age of 20 should read this.</a></p>
     </div>
 
     <a id="Old_BMI"></a>
-    <div id="Old_BMI_"></div>
+    <div id="Old_BMI_" class="fitplot"></div>
     <div class="markdown">
 <p>This is the BMI still in use by insurance companies and doctors. It can be very misleading for short or tall people, or people with a lot of muscle.</p>
     </div>
 
     <a id="Ponderal_Index"></a>
-    <div id="Ponderal_Index_"></div>
+    <div id="Ponderal_Index_" class="fitplot"></div>
     <div class="markdown">
 <p>Should be consistent for people past adolescence. <a href="https://en.wikipedia.org/wiki/Corpulence_index" target="_blank">Read more here.</a> The nominal range is 11 to 14 or 15.</p>
     </div>
@@ -254,6 +258,7 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 <script>
 let d; // for debugging, hold global of `data`
 let charts = {}; // global of all the plots
+let bindto_charts = {};
 
 main();
 collapsible();

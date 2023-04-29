@@ -57,3 +57,7 @@ a {
     overflow: hidden;
     background-color: rgb(48, 56, 65);
 }
+
+.fitplot {
+    height: 339px;
+}
