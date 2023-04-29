@@ -71,6 +71,10 @@ function compute_derived(raw_data) {
         raw_data["Food Energy [C]"]
     ]);
 
+    data["TDEE [C]"] = hadamard_sum([
+        raw_data["Resting Energy [C]"], 
+        raw_data["Active Energy [C]"]]);
+
     data["Active Weight Change [lbs]"] = [];
     data["Cumulative Dietary Weight Change [lbs]"] = [];
     let x_sum = 0;
@@ -180,6 +184,20 @@ function main() {
         download: true,
         complete: function(results, file) {
             update(results.data);
+
+            // Draws the first undrawn plot, waits, then recurs until all are drawn.
+            const delay_ms = 100;
+            let draw_one = () => {
+                const keys = Object.keys(charts)
+                for (let key of keys) {
+                    if (charts[key].drawn !== true) {
+                        charts[key].draw_now();
+                        setTimeout(draw_one, delay_ms);
+                        return;
+                    }
+                }
+            }
+            draw_one();
         } 
     });
 }

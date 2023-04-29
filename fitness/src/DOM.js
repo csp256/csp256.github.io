@@ -59,3 +59,36 @@ function handle_files(input) {
     );
 }
 
+//  █████  ██████  ██████  ██      ███████     ██   ██ ███████  █████  ██      ████████ ██   ██ 
+// ██   ██ ██   ██ ██   ██ ██      ██          ██   ██ ██      ██   ██ ██         ██    ██   ██ 
+// ███████ ██████  ██████  ██      █████       ███████ █████   ███████ ██         ██    ███████ 
+// ██   ██ ██      ██      ██      ██          ██   ██ ██      ██   ██ ██         ██    ██   ██ 
+// ██   ██ ██      ██      ███████ ███████     ██   ██ ███████ ██   ██ ███████    ██    ██   ██ 
+
+// Called when user manually uploads a CSV file
+var x, y;
+function load_apple_health(input) {
+    let file = input.files[0];
+    console.log(file)
+    x = file;
+    const reader = new FileReader()
+    reader.onload = event => y = parse_AH( from_xml( event.target.result ) ); // desired file content written to y
+    reader.onerror = error => reject(error)
+    y = reader.readAsText(file)
+    // x = from_xml(file)
+    // console.log(x)
+}
+
+
+var ah = {};
+function parse_AH(data) {
+    ah.add_record = function(x) {
+        if (typeof this[x["@type"]] === "undefined") {
+            this[x["@type"]] = [x];
+        } else {
+            this[x["@type"]].push(x);
+        }
+    }
+
+    data.HealthData.Record.forEach( el => ah.add_record(el) )
+}

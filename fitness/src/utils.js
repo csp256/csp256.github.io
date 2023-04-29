@@ -18,6 +18,10 @@ function get_url_anchor() {
         : null;
 }
 
+function is_safari() {
+    return navigator.userAgent.indexOf('Safari') > -1 && navigator.userAgent.indexOf('Chrome') <= -1;
+}
+
 // ███████ ██ ██      ████████ ███████ ██████  ██ ███    ██  ██████  
 // ██      ██ ██         ██    ██      ██   ██ ██ ████   ██ ██       
 // █████   ██ ██         ██    █████   ██████  ██ ██ ██  ██ ██   ███ 
