@@ -26,10 +26,12 @@ function update(results) {
 
         config_plot(data)
             .set_title("Cumulative Active Weight Change [lbs]")
-            .add_cumulative("Active Weight Change [lbs]")
+            .add("Cumulative Active Weight Change [lbs]", { smoothing:0, type:"area" })
             .add("Cumulative Dietary Weight Change [lbs]", { smoothing:0, type:"area" })
+            .add("Cumulative Active Weight Change [%]", { smoothing:0, type:"area" })
             .group_together()
             .rescale()
+            .toggle_last()
             .done();
     }
 
@@ -100,7 +102,7 @@ function update(results) {
             .add("Implied Deficit [C]")
             .done();
 
-        config_plot(data).add("Deficit Error [C]", { smoothing: 14 }).toggle("Deficit Error [C]").done();
+        config_plot(data).add("Deficit Error [C]", { smoothing: 7 }).toggle("Deficit Error [C]").done();
     }
 
     { // Body Indexes

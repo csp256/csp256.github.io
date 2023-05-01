@@ -130,7 +130,9 @@ function hadamard_quotient(a, b) {
     const len = a.length;
     let output = [...a];
     for (let i = 0; i < len; i++) {
-        output[i] /= b[i];
+        (b[i] == 0)
+            ? output[i] = null
+            : output[i] /= b[i];
     }
     return output;    
 }

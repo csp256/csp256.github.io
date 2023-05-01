@@ -14,9 +14,8 @@ function transpose(data) {
         output[data[0][field_id]] = [];
         // Date is special, handle it differently
         if ("Date" === data[0][field_id]) {
-            // const start = new Date("February 11, 2023");
             for (let i = 1; i < data.length; i++) {
-                // This setYear hack will need updating :)
+                // TODO: This setYear hack will fuck everything up and must be fixed soon
                 output[data[0][field_id]].push(new Date(data[i][field_id]).setYear(2023));
             }
         } else {
@@ -39,7 +38,7 @@ function transpose(data) {
         }
     }
 
-    // temporary
+    // TODO: provide users a better way of inputing this 
     output["Height [m]"] = 1.93; 
 
     return output;
@@ -63,6 +62,10 @@ function compute_derived(raw_data) {
     const len = raw_data["Date"].length;
     let data = raw_data;
 
+    let ratio_as_percent = function(a, b) {
+        return hadamard_quotient(a, b).map(el => { return el * 100.0; });
+    }
+
     data["Weight [kg]"] = data["Weight [lbs]"].map(n => 0.453592 * n);
 
     data["Deficit [C]"] = hadamard_sum([
@@ -76,14 +79,22 @@ function compute_derived(raw_data) {
         raw_data["Active Energy [C]"]]);
 
     data["Active Weight Change [lbs]"] = [];
+    data["Cumulative Active Weight Change [lbs]"] = [];
     data["Cumulative Dietary Weight Change [lbs]"] = [];
+    data["Cumulative Weight Change [lbs]"] = [];
     let x_sum = 0;
     for (let i = 0; i < len; i++) {
         const x = data["Active Energy [C]"][i] / 3500.0;
         x_sum += x;
         data["Active Weight Change [lbs]"].push(x);
-        data["Cumulative Dietary Weight Change [lbs]"].push(data["Weight [lbs]"][i] - data["Weight [lbs]"][0] - x_sum);
+        data["Cumulative Active Weight Change [lbs]"].push(x_sum);
+        const delta_weight = data["Weight [lbs]"][i] - data["Weight [lbs]"][0];
+        data["Cumulative Dietary Weight Change [lbs]"].push(delta_weight - x_sum);
+        data["Cumulative Weight Change [lbs]"].push(delta_weight);
     }
+    data["Cumulative Active Weight Change [%]"] = ratio_as_percent(
+            data["Cumulative Active Weight Change [lbs]"], 
+            data["Cumulative Weight Change [lbs]"]);
 
     data["Expected Weight Change [lbs]"] = [];
     add_cumulative_sum(data, "Deficit [C]"); // need this one
@@ -108,10 +119,6 @@ function compute_derived(raw_data) {
     add_day_delta(data, "Weight [lbs]", 1);
     add_day_delta(data, "Weight [lbs]", 7);
     add_day_delta(data, "Weight [lbs]", 30);
-
-    let ratio_as_percent = function(a, b) {
-        return hadamard_quotient(a, b).map(el => { return el * 100.0; });
-    }
 
     data["7 Day Delta of Weight [%]"] = ratio_as_percent(
             data["7 Day Delta of Weight [lbs]"],
