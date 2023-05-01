@@ -102,7 +102,7 @@ function update(results) {
             .add("Implied Deficit [C]")
             .done();
 
-        config_plot(data).add("Deficit Error [C]", { smoothing: 7 }).toggle("Deficit Error [C]").done();
+        config_plot(data).add("Deficit Error [C]", { smoothing: 14 }).toggle("Deficit Error [C]").done();
     }
 
     { // Body Indexes
