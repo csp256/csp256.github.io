@@ -225,22 +225,23 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 </div>
 
 <!-- 
-██████   ██████  ██████  ██    ██     ██ ███    ██ ██████  ███████ ██   ██ ███████ ███████ 
-██   ██ ██    ██ ██   ██  ██  ██      ██ ████   ██ ██   ██ ██       ██ ██  ██      ██      
-██████  ██    ██ ██   ██   ████       ██ ██ ██  ██ ██   ██ █████     ███   █████   ███████ 
-██   ██ ██    ██ ██   ██    ██        ██ ██  ██ ██ ██   ██ ██       ██ ██  ██           ██ 
-██████   ██████  ██████     ██        ██ ██   ████ ██████  ███████ ██   ██ ███████ ███████ 
+ ██████  ██████  ███    ███ ██████   ██████  ███████ ██ ████████ ██  ██████  ███    ██ 
+██      ██    ██ ████  ████ ██   ██ ██    ██ ██      ██    ██    ██ ██    ██ ████   ██ 
+██      ██    ██ ██ ████ ██ ██████  ██    ██ ███████ ██    ██    ██ ██    ██ ██ ██  ██ 
+██      ██    ██ ██  ██  ██ ██      ██    ██      ██ ██    ██    ██ ██    ██ ██  ██ ██ 
+ ██████  ██████  ██      ██ ██       ██████  ███████ ██    ██    ██  ██████  ██   ████ 
  -->
 
-<button type="button" class="collapsible">Body Indexes</button>
+<button type="button" class="collapsible">Composition</button>
 <div class="content">
-    <p>If you supplied your own CSV data, please input your height in centimeters: <input type="number" id="height_input" name="height_input" min="10" max="300" style="width:5em"> <button type="button" onclick='d["Height [m]"] = 0.01 * document.getElementById("height_input").value; plot_body_indexes(d)'>Update Plots</button> (Work in progress!)
-</p>
+    <p>If you supplied your own CSV data, please input your height in centimeters: <input type="number" id="height_input" name="height_input" min="10" max="300" style="width:5em"> <button type="button" onclick='d["Height [m]"] = 0.01 * document.getElementById("height_input").value; plot_body_indexes(d)'>Update Plots</button> (Work in progress!)</p>
+
+    <p>This entire section should not be taken too seriously. <a href="https://macrofactorapp.com/body-composition/" target="_blank">See this article for more information.</a></p>
 
     <a id="New_BMI"></a>
     <div id="New_BMI_" class="fitplot"></div>
     <div class="markdown">
-<p>This is BMI (body mass index) but with improved handling of short and tall people. It is still a flawed metric with limited applicability. <a href="https://en.wikipedia.org/wiki/Body_mass_index#Children_and_youth" target="_blank">People under the age of 20 should read this.</a></p>
+<p>This is BMI (body mass index) but with improved handling of short and tall people, <a href="https://people.maths.ox.ac.uk/trefethen/bmi.html" target="_blank">provided by Dr Trefethen</a>. It is still a flawed metric with limited applicability. <a href="https://en.wikipedia.org/wiki/Body_mass_index#Children_and_youth" target="_blank">People under the age of 20 should read this.</a></p>
     </div>
 
     <a id="Old_BMI"></a>
@@ -254,6 +255,13 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
     <div class="markdown">
 <p>Should be consistent for people past adolescence. <a href="https://en.wikipedia.org/wiki/Corpulence_index" target="_blank">Read more here.</a> The nominal range is 11 to 14 or 15.</p>
     </div>
+
+    <a id="Body_Fat_Percentage"></a>
+    <div id="Body_Fat_Percentage_" class="fitplot"></div>
+    <div class="markdown">
+<p>Merely an estimate, and not a particularly good one.</p>
+    </div>
+
 
 <script>
 let d; // for debugging, hold global of `data`

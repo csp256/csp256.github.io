@@ -38,8 +38,18 @@ function transpose(data) {
         }
     }
 
+    // if you don't have data for most recent day, truncate the list (experimental)
+    for (let field of Object.keys(output)) {
+        const i = output[field].length - 1;
+        if (output[field][i] === 0) {
+            output[field].pop();// = NaN;
+        }
+    }
+
     // TODO: provide users a better way of inputing this 
     output["Height [m]"] = 1.93; 
+    output["Age [year]"] = 36;
+    output["Is Male"] = 1; // 0 for female
 
     return output;
 }
@@ -124,15 +134,38 @@ function compute_derived(raw_data) {
             data["7 Day Delta of Weight [lbs]"],
             data["Weight [lbs]"]);  // linearization error is much smaller than measurement noise
 
-    // The effect of sex, age and race on estimating percentage body fat from body mass index: The Heritage Family Study.
-    // body_fat_percentage = (1.39 * BMI) + (0.16 * Age) - (10.34 * S) - 9
-    // S = 1 for male and 0 for female.
-
     data["Ratio of Active to Deficit [%]"] = ratio_as_percent(
             data["Active Energy [C]"],
             data["Deficit [C]"]);
 
     return data;
+}
+
+function update_composition(data) {
+    let scalar;
+    data["New BMI"] = data["Weight [kg]"].map((
+        scalar = 1.0 / Math.pow(data["Height [m]"], 2.5),
+        n => n * scalar));
+
+    data["Old BMI"] = data["Weight [kg]"].map((
+        scalar = 1.0 / Math.pow(data["Height [m]"], 2),
+        n => n * scalar));
+
+    data["Ponderal Index"] = data["Weight [kg]"].map((
+        scalar = 1.0 / Math.pow(data["Height [m]"], 3),
+        n => n * scalar));
+
+    // The effect of sex, age and race on estimating percentage body fat from body mass index: The Heritage Family Study.
+    // body_fat_percentage = (1.39 * BMI) + (0.16 * Age) - (10.34 * S) - 9
+    // S = 1 for male and 0 for female.
+    data["Body Fat (New BMI) [%]"] = [];
+    data["Body Fat (Old BMI) [%]"] = [];
+    const offset = (0.16 * data["Age [year]"]) - (10.34 * data["Is Male"]) - 9.0;
+    const len = data["Date"].length;
+    for (let i = 0; i < len; i++) {
+        data["Body Fat (New BMI) [%]"].push( 1.39 * data["New BMI"][i] + offset);
+        data["Body Fat (Old BMI) [%]"].push( 1.39 * data["Old BMI"][i] + offset);
+    }
 }
 
 // ██    ██ ██████  ██████   █████  ████████ ███████     ██████   █████  ████████  █████  
@@ -193,7 +226,7 @@ function main() {
             update(results.data);
 
             // Draws the first undrawn plot, waits, then recurs until all are drawn.
-            const delay_ms = 100;
+            const delay_ms = 200;
             let draw_one = () => {
                 const keys = Object.keys(charts)
                 for (let key of keys) {

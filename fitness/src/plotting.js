@@ -105,30 +105,26 @@ function update(results) {
         config_plot(data).add("Deficit Error [C]", { smoothing: 14 }).toggle("Deficit Error [C]").done();
     }
 
-    { // Body Indexes
-        plot_body_indexes(data);
+    { // Composition
+        plot_composition(data);
     }
 }
 
-function plot_body_indexes(data) {
-    let scalar;
-    data["New BMI"] = data["Weight [kg]"].map((
-        scalar = 1.0 / Math.pow(data["Height [m]"], 2.5),
-        n => n * scalar));
-
-    data["Old BMI"] = data["Weight [kg]"].map((
-        scalar = 1.0 / Math.pow(data["Height [m]"], 2),
-        n => n * scalar));
-
-    data["Ponderal Index"] = data["Weight [kg]"].map((
-        scalar = 1.0 / Math.pow(data["Height [m]"], 3),
-        n => n * scalar));
+function plot_composition(data) {
+    update_composition(data);
 
     const spread = 0.5;
     if (count("plot body indexes") === 1) {
         config_plot(data).add("New BMI").y_pad(spread).append_bindto("_").done();
         config_plot(data).add("Old BMI").y_pad(spread).append_bindto("_").done();
         config_plot(data).add("Ponderal Index").y_pad(spread).append_bindto("_").done();
+        config_plot(data)
+            .set_title("Body Fat Percentage")
+            .set_bindto_from_title()
+            .append_bindto("_")
+            .add("Body Fat (New BMI) [%]")
+            .add("Body Fat (Old BMI) [%]")
+            .done();
     } else {
         function update_body_index(field) {
             field_sma = add_sma(data, field, 7, true);

@@ -23,6 +23,12 @@ default bb color pallete:
 */
 
 body {
+    margin:40px auto;
+    max-width:800px;
+    line-height:1.6;
+    font-size:18px;
+    padding:0 10px;
+/* above shamelessly stolen from http://bettermotherfuckingwebsite.com/ lol */
     background-color: rgb(48, 56, 65);
     color: rgb(216, 222, 233);
 }
