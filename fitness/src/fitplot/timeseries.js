@@ -353,8 +353,8 @@ function config_plot(data, type = "timeseries") {
     };
 
     obj.render = {
-        lazy: true,
-        observe: false
+        // lazy: true,
+        // observe: false
     };
 
     obj.onrendered = function() {

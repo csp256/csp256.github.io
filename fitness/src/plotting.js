@@ -116,8 +116,9 @@ function plot_composition(data) {
     const spread = 0.5;
     // if (count("plot body indexes") === 1) {
         config_plot(data).add("New BMI").rescale().set_zerobased(false).append_bindto("_").done();
-        config_plot(data).add("Old BMI").y_pad(spread).append_bindto("_").done();
-        config_plot(data).add("Ponderal Index").y_pad(spread).append_bindto("_").done();
+        config_plot(data).add("Old BMI").rescale().set_zerobased(false).append_bindto("_").done();
+        config_plot(data).add("Ponderal Index").rescale().set_zerobased(false).append_bindto("_").done();
+
         config_plot(data)
             .set_title("Body Fat Percentage")
             .set_bindto_from_title()
@@ -141,10 +142,15 @@ function plot_composition(data) {
 
         config_plot(data)
             .add("Fat Catabolism Limit [C]")
-            .add("Fat Catabolism Utilization [%]")
             .rescale()
             .set_zerobased(false)
-            .toggle_last(2)
+            .done()
+
+        config_plot(data)
+            .add("Fat Catabolism Utilization [%]")
+            .set_bindto("#temp")
+            .rescale()
+            .set_zerobased(false)
             .done()
 
     // } else {
