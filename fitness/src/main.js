@@ -142,9 +142,11 @@ function compute_derived(raw_data) {
 }
 
 function update_composition(data) {
+    const len = data["Date"].length;
+
     let scalar;
-    data["New BMI"] = data["Weight [kg]"].map((
-        scalar = 1.0 / Math.pow(data["Height [m]"], 2.5),
+    data["New BMI"] = data["Weight [kg]"].map(( // careful: 1.3 here, elsewhere 1.0
+        scalar = 1.3 / Math.pow(data["Height [m]"], 2.5),
         n => n * scalar));
 
     data["Old BMI"] = data["Weight [kg]"].map((
@@ -155,17 +157,30 @@ function update_composition(data) {
         scalar = 1.0 / Math.pow(data["Height [m]"], 3),
         n => n * scalar));
 
-    // The effect of sex, age and race on estimating percentage body fat from body mass index: The Heritage Family Study.
+    // The effect of sex, age and race on estimating percentage body fat from body mass index: 
+    // The Heritage Family Study.
     // body_fat_percentage = (1.39 * BMI) + (0.16 * Age) - (10.34 * S) - 9
     // S = 1 for male and 0 for female.
-    data["Body Fat (New BMI) [%]"] = [];
-    data["Body Fat (Old BMI) [%]"] = [];
-    const offset = (0.16 * data["Age [year]"]) - (10.34 * data["Is Male"]) - 9.0;
-    const len = data["Date"].length;
-    for (let i = 0; i < len; i++) {
-        data["Body Fat (New BMI) [%]"].push( 1.39 * data["New BMI"][i] + offset);
-        data["Body Fat (Old BMI) [%]"].push( 1.39 * data["Old BMI"][i] + offset);
-    }
+
+    const bodyfat_offset = (0.16 * data["Age [year]"]) - (10.34 * data["Is Male"]) - 9.0;
+    data["Body Fat [%]"] = data["New BMI"].map(el => 1.39 * el + bodyfat_offset);
+
+    data["Body Fat [lbs]"] = zip_with(
+        (body_fat_pcnt, weight) => (body_fat_pcnt/100.0) * weight, 
+        data["Body Fat [%]"],
+        data["Weight [lbs]"]);
+
+    data["Lean Body Mass [lbs]"] = zip_with(
+        (body_fat, weight) => weight - body_fat, 
+        data["Body Fat [lbs]"],
+        data["Weight [lbs]"]);
+
+    data["Fat Catabolism Limit [C]"] = data["Body Fat [lbs]"].map(el => -31 * el);
+
+    data["Fat Catabolism Utilization [%]"] = zip_with(
+        (deficit, limit) => 100.0 * (deficit / limit),
+        data["Deficit [C]"],
+        data["Fat Catabolism Limit [C]"]);
 }
 
 // ██    ██ ██████  ██████   █████  ████████ ███████     ██████   █████  ████████  █████  

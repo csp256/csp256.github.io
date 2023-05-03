@@ -161,6 +161,13 @@ function extend_timeseries_config(obj) {
         return this;
     }
 
+    obj.set_zerobased = function(input = true) {
+        obj.scatter.zerobased = input;
+        obj.line.zerobased = input;
+        obj.area.zerobased = input;
+        return this;
+    }
+
     obj._toggle_impl = [];
     obj.toggle = function(x) {
         obj._toggle_impl.push(x);
@@ -186,6 +193,9 @@ function extend_timeseries_config(obj) {
             false
         );
 
+        if (obj.bindto in bindto_charts) {
+            bindto_charts[obj.bindto].kill();
+        }
         let c = bb.generate(this);
         charts[obj.title.text] = c;
         bindto_charts[obj.bindto] = c;
@@ -200,6 +210,7 @@ function extend_timeseries_config(obj) {
         if (is_safari()) {
             c.draw_now();
         }
+        return c;
     }
 
     return obj;
@@ -280,6 +291,7 @@ function config_plot(data, type = "timeseries") {
 
     obj.scatter = {zerobased:true};
     obj.line = {zerobased:true};
+    obj.area = {};
 
     obj.grid = {
         focus: {

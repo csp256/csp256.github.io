@@ -114,36 +114,58 @@ function plot_composition(data) {
     update_composition(data);
 
     const spread = 0.5;
-    if (count("plot body indexes") === 1) {
-        config_plot(data).add("New BMI").y_pad(spread).append_bindto("_").done();
+    // if (count("plot body indexes") === 1) {
+        config_plot(data).add("New BMI").rescale().set_zerobased(false).append_bindto("_").done();
         config_plot(data).add("Old BMI").y_pad(spread).append_bindto("_").done();
         config_plot(data).add("Ponderal Index").y_pad(spread).append_bindto("_").done();
         config_plot(data)
             .set_title("Body Fat Percentage")
             .set_bindto_from_title()
             .append_bindto("_")
-            .add("Body Fat (New BMI) [%]")
-            .add("Body Fat (Old BMI) [%]")
+            .add("Body Fat [%]")
+            .rescale()
+            .set_zerobased(false)
             .done();
-    } else {
-        function update_body_index(field) {
-            field_sma = add_sma(data, field, 7, true);
-            charts[field].config("axis.y.min", array_min(data[field]) - spread, false);
-            charts[field].config("axis.y.max", array_max(data[field]) + spread, false);
-            // https://naver.github.io/billboard.js/release/latest/doc/Chart.html#load
-            charts[field].load( 
-                {
-                    columns:[
-                        [field, ...data[field]],
-                        [field_sma, ...data[field_sma]]
-                    ],
-                    resizeAfter: true
-                }
-            );
-        }
-        update_body_index("New BMI");
-        update_body_index("Old BMI");
-        update_body_index("Ponderal Index");
-    }
+
+        config_plot(data)
+            .add("Lean Body Mass [lbs]")
+            .rescale()
+            .set_zerobased(false)
+            .done()
+
+        config_plot(data)
+            .add("Body Fat [lbs]")
+            .rescale()
+            .set_zerobased(false)
+            .done()
+
+        config_plot(data)
+            .add("Fat Catabolism Limit [C]")
+            .add("Fat Catabolism Utilization [%]")
+            .rescale()
+            .set_zerobased(false)
+            .toggle_last(2)
+            .done()
+
+    // } else {
+    //     function update_body_index(field) {
+    //         field_sma = add_sma(data, field, 7, true);
+    //         charts[field].config("axis.y.min", array_min(data[field]) - spread, false);
+    //         charts[field].config("axis.y.max", array_max(data[field]) + spread, false);
+    //         // https://naver.github.io/billboard.js/release/latest/doc/Chart.html#load
+    //         charts[field].load( 
+    //             {
+    //                 columns:[
+    //                     [field, ...data[field]],
+    //                     [field_sma, ...data[field_sma]]
+    //                 ],
+    //                 resizeAfter: true
+    //             }
+    //         );
+    //     }
+    //     update_body_index("New BMI");
+    //     update_body_index("Old BMI");
+    //     update_body_index("Ponderal Index");
+    // }
 
 }

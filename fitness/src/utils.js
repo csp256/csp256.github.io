@@ -143,6 +143,22 @@ function hadamard_quotient(a, b) {
 // ██   ██ ██   ██ ██   ██ ██   ██    ██    
 // ██   ██ ██   ██ ██   ██ ██   ██    ██    
 
+function zip_with(...args) {
+    const iteratee = args.at(0);
+    const arrays = args.slice(1);
+    if (arrays.length === 0) {
+        return [];
+    }
+
+    const minLength = Math.min(...arrays.map(arr => arr.length));
+    const result = [];
+    for (let i = 0; i < minLength; ++i) {
+        result.push(iteratee(...arrays.map(arr => arr[i])));
+    }
+
+    return result;
+}
+
 function array_max(array) { 
     return array.reduce(
         function(a, b) { 

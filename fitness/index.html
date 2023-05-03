@@ -234,7 +234,7 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
 
 <button type="button" class="collapsible">Composition</button>
 <div class="content">
-    <p>If you supplied your own CSV data, please input your height in centimeters: <input type="number" id="height_input" name="height_input" min="10" max="300" style="width:5em"> <button type="button" onclick='d["Height [m]"] = 0.01 * document.getElementById("height_input").value; plot_body_indexes(d)'>Update Plots</button> (Work in progress!)</p>
+    <p>If you supplied your own CSV data, please input your height in centimeters: <input type="number" id="height_input" name="height_input" min="10" max="300" style="width:5em"> <button type="button" onclick='d["Height [m]"] = 0.01 * document.getElementById("height_input").value; plot_composition(d)'>Update Plots</button> (Work in progress!)</p>
 
     <p>This entire section should not be taken too seriously. <a href="https://macrofactorapp.com/body-composition/" target="_blank">See this article for more information.</a></p>
 
@@ -261,6 +261,15 @@ I'm a 6'4", 36 year old man who started trying to get in shape on Feb 11th 2023.
     <div class="markdown">
 <p>Merely an estimate, and not a particularly good one.</p>
     </div>
+
+    <a id="Lean_Body_Mass"></a>
+    <div id="Lean_Body_Mass_lbs" class="fitplot"></div>
+
+    <a id="Body_Fat"></a>
+    <div id="Body_Fat_lbs" class="fitplot"></div>
+
+    <a id="Fat_Catabolism"></a>
+    <div id="Fat_Catabolism_Limit_C" class="fitplot"></div>
 
 
 <script>
