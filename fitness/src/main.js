@@ -16,7 +16,7 @@ function transpose(data) {
         if ("Date" === data[0][field_id]) {
             for (let i = 1; i < data.length; i++) {
                 // TODO: This setYear hack will fuck everything up and must be fixed soon
-                output[data[0][field_id]].push(new Date(data[i][field_id]).setYear(2023));
+                output[data[0][field_id]].push(new Date(data[i][field_id]) );//.setYear(2023));
             }
         } else {
             for (let i = 1; i < data.length; i++) {
