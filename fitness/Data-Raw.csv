@@ -1,4 +1,3 @@
-Data-Raw
 Date,Day,Weight [lbs],Food Energy [C],Protein [g],Fat [g],Carbs [g],Walking [Steps],Walking [mi],Active Energy [C],Resting Energy [C]
 "Saturday, February 11, 2023",0,341.4,"1,980",92,,,"3,480",2.10,350,"2,526"
 "Sunday, February 12, 2023",1,341.2,"2,450",72,,,865,0.39,32,"2,500"
