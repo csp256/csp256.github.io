@@ -11,7 +11,8 @@ function update(results) {
     d = data;
 
     { // Weight
-        config_plot(data).add("Weight [lbs]").y_min_pad(5).done();
+        //config_plot(data).add("Weight [lbs]").y_min_pad(5).done();
+        config_plot(data).add("Weight [lbs]").done();
         // TODO: create add() parameter for adding backward_difference
         config_plot(data).add("1 Day Delta of Weight [lbs]").done(); 
 
