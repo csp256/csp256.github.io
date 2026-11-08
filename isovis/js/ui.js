@@ -159,7 +159,7 @@ function update_coeff() {
     gui_folder(left_gui, 'Shape').onResize();
     var sub_folder = gui_folder(left_gui, 'Shape').addFolder('Coefficients');
     for (var i = 0; i < shape_params.coeff_count; i++) {
-        sub_folder.add(shape_params.coeff, i, shape_params.coeff[i]).onChange(set_scalar_field_dirty);
+        sub_folder.add(shape_params.coeff, i).onChange(set_scalar_field_dirty);
     }
     if (!c || typeof c == 'undefined') {
         sub_folder.open();
@@ -195,7 +195,7 @@ function shape_folder(g) {
     folder.add(shape_params, 'coeff_count').min(1).max(shape_params.max_coeff_count).step(1).onChange(update_coeff);
     var sub_folder = folder.addFolder('Coefficients');
     for (var i = 0; i < shape_params.coeff_count; i++) {
-        sub_folder.add(shape_params.coeff, i, shape_params.coeff[i]).onChange(set_scalar_field_dirty);
+        sub_folder.add(shape_params.coeff, i).onChange(set_scalar_field_dirty);
     }
     sub_folder.open();
 }
