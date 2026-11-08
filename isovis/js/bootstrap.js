@@ -10,7 +10,8 @@ async function start_iso_vis() {
         const { OrbitControls } = await import(legacy ? '../lib/three-r162/OrbitControls.js' : '../lib/three-r187/OrbitControls.js');
         window.THREE = { ...three, OrbitControls };
         init_params();
-        init(renderer_context, location.hash.startsWith('#session=') || has_local_recovery() ? 8 : undefined);
+        // Recovery/shared links must not silently lower the default resolution.
+        init(renderer_context);
         animate();
         start_session_links();
         start_autosave();

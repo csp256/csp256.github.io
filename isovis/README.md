@@ -2,7 +2,7 @@
 
 Published at https://csp256.github.io/isovis/ from
 [the IsoVis source repository](https://gitlab.com/csp256/isovis), revision
-`c324d49f4af0b5bb0a1e2ff06c9ea9a10039dabe`. The app and all its libraries are served locally from this folder;
+`81aae3bbdbb7915186ace67fddd5edd7afe3914f`. The app and all its libraries are served locally from this folder;
 upstream library licenses/notices are retained.
 
 The original `isovis.html` entry point is named `index.html` here so the app opens
