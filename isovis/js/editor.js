@@ -150,6 +150,4 @@ function update_editor() {
     }
     camera.updateProjectionMatrix();
     update_editor_divider();
-    if (typeof editor_width_control !== 'undefined')
-        editor_width_control?.max(editor_width_limit()).updateDisplay();
 }

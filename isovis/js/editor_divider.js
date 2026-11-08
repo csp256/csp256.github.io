@@ -2,7 +2,7 @@
 // Generated browser output: edit src/editor_divider.ts, then run `just build`.
 var editor_divider = null;
 var dispose_editor_divider = null;
-function editor_width_limit() { return Math.floor(Math.max(0, window.innerWidth) / 2); }
+function editor_width_limit() { return Math.floor(Math.max(0, window.innerWidth - 200)); }
 function update_editor_divider() {
     if (!editor_divider)
         return;

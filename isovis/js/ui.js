@@ -2,7 +2,6 @@
 // Generated browser output: edit src/ui.ts, then run `just build`.
 var left_gui;
 var right_gui;
-var editor_width_control = null;
 function gui_folder(gui, name) {
     const folder = gui.__folders[name];
     if (!folder)
@@ -186,7 +185,6 @@ function dimensions_changed() {
 }
 function shape_folder(g) {
     var folder = g.addFolder('Shape');
-    editor_width_control = folder.add(shape_params, 'editor_width').min(0).max(editor_width_limit()).step(1).onFinishChange(update_editor);
     validated_number_control(folder, shape_params, 'resolution', require_resolution, set_size_dirty, true, [2, 65, 1]);
     folder.add(shape_params, 'reset').name('Abort').onChange(reset_worker10);
     folder.add(shape_params, 'memory_overuse').min(0).max(1).step(0.01);
