@@ -1,0 +1,18 @@
+{
+  "release": "r162",
+  "commit": "ef80ac74e6716a50104a57d8add6c8a950bff8d7",
+  "files": {
+    "three.module.js": {
+      "source": "https://raw.githubusercontent.com/mrdoob/three.js/ef80ac74e6716a50104a57d8add6c8a950bff8d7/build/three.module.js",
+      "sha256": "ec3ddc3897ec75288b5502057456c471c2eb7d6e7cf36140d0a5224e94a1984b"
+    },
+    "OrbitControls.js": {
+      "source": "https://raw.githubusercontent.com/mrdoob/three.js/ef80ac74e6716a50104a57d8add6c8a950bff8d7/examples/jsm/controls/OrbitControls.js",
+      "sha256": "f260591ef315aa04888152e7f121865214e33fb54727145cf4e4445058db1297"
+    },
+    "LICENSE": {
+      "source": "https://raw.githubusercontent.com/mrdoob/three.js/ef80ac74e6716a50104a57d8add6c8a950bff8d7/LICENSE",
+      "sha256": "4c40a1ef62450b857c3b2aaf294936304cd552d965fbcd9d32d4c5bcf4ba4454"
+    }
+  }
+}

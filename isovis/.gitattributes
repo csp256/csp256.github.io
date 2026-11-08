@@ -1,0 +1,4 @@
+# Preserve pinned upstream bytes and notices in this published snapshot.
+lib/** -text -whitespace linguist-vendored
+js/*.js text eol=lf
+*.html text eol=lf
