@@ -34,6 +34,19 @@ button {
 	left: 2px;
 }
 
+.gui_resize_handle {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 8px;
+	cursor: ew-resize;
+	touch-action: none;
+	z-index: 2;
+}
+
+.gui_resize_handle[data-anchor="left"] { right: 0; }
+.gui_resize_handle[data-anchor="right"] { left: 0; }
+
 #toolbar {
 				position: absolute;
 				top: 0px;

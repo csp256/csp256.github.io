@@ -37,8 +37,83 @@ function validated_number_control(folder, object, key, validate, changed, finish
             changed(); });
     return control;
 }
-// Keep lifecycle adaptation in application code; the vendored build is pristine.
+// Keep resize/lifecycle adaptation in application code; the vendor is pristine.
+const gui_resize_cleanup = new WeakMap();
+// dat.GUI temporarily adds a pixel during construction, then removes it in a
+// timer. Preserve user widths separately so synchronous rebuilds do not drift.
+const gui_resize_width = new WeakMap();
+function install_gui_resize(gui, anchor, width) {
+    const handle = document.createElement('div');
+    handle.className = 'gui_resize_handle';
+    handle.dataset.anchor = anchor;
+    handle.tabIndex = 0;
+    handle.setAttribute('role', 'separator');
+    handle.setAttribute('aria-orientation', 'vertical');
+    handle.setAttribute('aria-label', anchor === 'left' ? 'Resize settings menu' : 'Resize transforms menu');
+    const direction = anchor === 'left' ? 1 : -1;
+    let drag = null;
+    function resize(width) {
+        const maximum = Math.max(1, window.innerWidth - shape_params.editor_width);
+        gui.width = Math.max(Math.min(180, maximum), Math.min(maximum, width));
+        gui_resize_width.set(gui, gui.width);
+        gui.onResize();
+        handle.setAttribute('aria-valuenow', String(gui.width));
+    }
+    function finish() {
+        if (!drag)
+            return;
+        const pointer = drag.pointer;
+        drag = null;
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        document.removeEventListener('pointercancel', up);
+        window.removeEventListener('blur', finish);
+        if (handle.hasPointerCapture(pointer))
+            handle.releasePointerCapture(pointer);
+    }
+    function down(event) {
+        if (event.button !== 0 || drag)
+            return;
+        event.preventDefault();
+        event.stopPropagation();
+        drag = { pointer: event.pointerId, x: event.clientX, width: gui_resize_width.get(gui) ?? gui.width };
+        document.addEventListener('pointermove', move);
+        document.addEventListener('pointerup', up);
+        document.addEventListener('pointercancel', up);
+        window.addEventListener('blur', finish);
+        handle.setPointerCapture(event.pointerId);
+    }
+    function move(event) {
+        if (drag && event.pointerId === drag.pointer)
+            resize(drag.width + direction * (event.clientX - drag.x));
+    }
+    function up(event) { if (drag && event.pointerId === drag.pointer)
+        finish(); }
+    function key(event) {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')
+            return;
+        event.preventDefault();
+        event.stopPropagation();
+        resize(gui.width + direction * (event.key === 'ArrowRight' ? 10 : -10));
+    }
+    handle.addEventListener('pointerdown', down);
+    handle.addEventListener('lostpointercapture', finish);
+    handle.addEventListener('keydown', key);
+    gui.domElement.appendChild(handle);
+    gui_resize_width.set(gui, width);
+    handle.setAttribute('aria-valuenow', String(width));
+    gui_resize_cleanup.set(gui, () => {
+        finish();
+        handle.removeEventListener('pointerdown', down);
+        handle.removeEventListener('lostpointercapture', finish);
+        handle.removeEventListener('keydown', key);
+        handle.remove();
+    });
+}
 function destroy_gui(gui) {
+    gui_resize_cleanup.get(gui)?.();
+    gui_resize_cleanup.delete(gui);
+    gui_resize_width.delete(gui);
     function stop_listening(folder) {
         folder.__listening.length = 0;
         Object.values(folder.__folders).forEach(stop_listening);
@@ -49,6 +124,7 @@ function destroy_gui(gui) {
     gui.destroy();
 }
 function build_left_gui() {
+    const width = typeof left_gui === 'undefined' ? 245 : gui_resize_width.get(left_gui) ?? left_gui.width;
     if (typeof left_gui == 'undefined') {
         // Default state.
         var closed_state = { Shape: false, Camera: true, Material: true };
@@ -57,7 +133,7 @@ function build_left_gui() {
         var closed_state = { Shape: gui_folder(left_gui, 'Shape').closed, Camera: gui_folder(left_gui, 'Camera').closed, Material: gui_folder(left_gui, 'Material').closed };
         destroy_gui(left_gui);
     }
-    left_gui = new dat.GUI({ hideable: false });
+    left_gui = new dat.GUI({ hideable: false, resizable: false, width });
     left_gui.domElement.id = 'left_gui';
     shape_folder(left_gui);
     gui_folder(left_gui, 'Shape').closed = closed_state.Shape;
@@ -67,6 +143,7 @@ function build_left_gui() {
     gui_folder(left_gui, 'Material').closed = closed_state.Material;
     left_gui.__closeButton.style.position = 'fixed';
     left_gui.__closeButton.style.left = '-10000px';
+    install_gui_resize(left_gui, 'left', width);
 }
 function update_coeff() {
     set_scalar_field_dirty();
@@ -160,6 +237,7 @@ function material_folder(g) {
 }
 // /////////////////////////////
 function build_right_gui() {
+    const width = typeof right_gui === 'undefined' ? 245 : gui_resize_width.get(right_gui) ?? right_gui.width;
     if (typeof right_gui == 'undefined') {
         var closed_state = { Transforms: true };
     }
@@ -168,7 +246,9 @@ function build_right_gui() {
         var closed_state = { Transforms: gui_folder(right_gui, 'Transforms').closed };
         destroy_gui(right_gui);
     }
-    right_gui = new dat.GUI({ hideable: false });
+    right_gui = new dat.GUI({ hideable: false, resizable: false, width });
+    right_gui.domElement.id = 'right_gui';
+    install_gui_resize(right_gui, 'right', width);
     validated_number_control(right_gui, transform_params, 'zoom', require_zoom, set_coords_dirty, false, [0.000001]);
     transforms_folder(right_gui);
     gui_folder(right_gui, 'Transforms').closed = closed_state.Transforms;
@@ -223,7 +303,10 @@ function transforms_folder(g) {
 }
 function adjust_right_gui() {
     right_gui.domElement.style.position = 'fixed';
-    right_gui.domElement.style.left = (window.innerWidth - parseInt(right_gui.domElement.style.width)).toString() + 'px';
+    right_gui.domElement.style.left = 'auto';
+    right_gui.domElement.style.right = '0px';
+    right_gui.domElement.style.top = '0px';
+    right_gui.domElement.style.marginRight = '0px';
     right_gui.domElement.style.height = (window.innerHeight - 50).toString() + 'px';
 }
 // /////////////////////////////
