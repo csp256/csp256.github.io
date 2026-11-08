@@ -117,24 +117,39 @@ function init_editor() {
     // button.textContent = 'GIF';
     // button.addEventListener("click", start_gif, false);
     // editor_toolbar.appendChild( button );
+    init_editor_divider();
 }
 function update_editor() {
     var width_string = shape_params.editor_width.toString() + 'px';
+    editor_toolbar.style.display = code_mirror_div.style.display = shape_params.editor_width === 0 ? 'none' : '';
     editor_toolbar.style.width = width_string;
     code_mirror_div.style.width = width_string;
     code_mirror_div.style.left = '0px';
     code_mirror_div.style.top = ( /*document.getElementById("toolbar").offsetHeight +*/editor_toolbar.getBoundingClientRect().bottom).toString() + 'px';
-    make_camera();
+    // A resize changes projection bounds, not camera pose or control identity.
+    if (typeof camera === 'undefined' || camera_params.perspective !== (camera instanceof THREE.PerspectiveCamera))
+        make_camera();
     container.style.left = width_string;
     left_gui.domElement.style.left = width_string;
-    renderer.domElement.style.width = (window.innerWidth - shape_params.editor_width).toString() + 'px';
+    renderer.domElement.style.width = Math.max(1, window.innerWidth - shape_params.editor_width).toString() + 'px';
     my_code_mirror.setSize(shape_params.editor_width, Math.max(1, window.innerHeight - editor_toolbar.getBoundingClientRect().bottom));
     my_code_mirror.refresh();
     adjust_right_gui();
-    // I have this same code in like three places... I should clean it up.
-    renderer.setSize(window.innerWidth - shape_params.editor_width, window.innerHeight);
-    if (camera instanceof THREE.PerspectiveCamera)
-        camera.aspect = (window.innerWidth - shape_params.editor_width) / (window.innerHeight);
+    const width = Math.max(1, window.innerWidth - shape_params.editor_width), height = Math.max(1, window.innerHeight);
+    renderer.setSize(width, height);
+    if (camera instanceof THREE.PerspectiveCamera) {
+        camera.aspect = width / height;
+        camera.fov = camera_params.fov;
+    }
+    else {
+        const scale = Math.min(width, height) * camera_params.scale / 10;
+        camera.left = width / -scale;
+        camera.right = width / scale;
+        camera.top = height / scale;
+        camera.bottom = height / -scale;
+    }
     camera.updateProjectionMatrix();
-    container.style.left = shape_params.editor_width.toString() + 'px';
+    update_editor_divider();
+    if (typeof editor_width_control !== 'undefined')
+        editor_width_control?.max(editor_width_limit()).updateDisplay();
 }

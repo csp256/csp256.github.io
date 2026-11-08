@@ -16,6 +16,8 @@ async function start_iso_vis() {
         start_autosave();
     }
     catch (error) {
+        if (typeof dispose_editor_divider === 'function')
+            dispose_editor_divider();
         if (typeof workers !== 'undefined')
             workers.forEach(worker => worker.terminate());
         if (typeof controls !== 'undefined')

@@ -47,6 +47,27 @@ button {
 .gui_resize_handle[data-anchor="left"] { right: 0; }
 .gui_resize_handle[data-anchor="right"] { left: 0; }
 
+#editor_divider {
+	position: fixed;
+	top: 0;
+	bottom: 0;
+	width: 8px;
+	z-index: 1001;
+	cursor: col-resize;
+	touch-action: none;
+	background: transparent;
+}
+
+#editor_divider:hover, #editor_divider:focus-visible {
+	background: #8f938f;
+	outline: none;
+}
+
+body.editor_resize_active, body.editor_resize_active * {
+	cursor: col-resize !important;
+	user-select: none !important;
+}
+
 #toolbar {
 				position: absolute;
 				top: 0px;
