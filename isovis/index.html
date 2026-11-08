@@ -136,8 +136,10 @@ function read_worker_request(value) {
     });
     if (record.code !== undefined && typeof record.code !== 'string')
         throw new Error('Invalid worker source');
+    // Validate the legacy field without allowing it to change fixed 1.5x capacity.
+    protocol_number(shape.memory_overuse, 0, 1);
     return { num, batch_id: protocol_batch(record.batch_id), message_type: stage, r, n: dimensions,
-        params: { dimensions, resolution, coeff, iso: protocol_number(shape.iso, -Number.MAX_VALUE, Number.MAX_VALUE), interpolate: protocol_boolean(shape.interpolate), memory_overuse: protocol_number(shape.memory_overuse, 0, 1) },
+        params: { dimensions, resolution, coeff, iso: protocol_number(shape.iso, -Number.MAX_VALUE, Number.MAX_VALUE), interpolate: protocol_boolean(shape.interpolate), memory_overuse: 0.5 },
         calc_normals: protocol_boolean(record.calc_normals), code: record.code,
         vertex_buffer: protocol_buffer(record.vertex_buffer), face_buffer: protocol_buffer(record.face_buffer), normal_buffer: protocol_buffer(record.normal_buffer) };
 }

@@ -36,7 +36,7 @@ function init_params() {
         resolution: 30,
         reset: false,
         dimensions: 5,
-        memory_overuse: 0.5,
+        memory_overuse: 0.5, // Fixed 50% headroom: mesh buffers grow to 1.5x required capacity.
         iso: 5,
         parameters: [],
         interpolate: true,

@@ -167,10 +167,12 @@ function prepare_session(text) {
     const coeff = legacy_numbers(s.coeff);
     if (is_settings_record(patch) && patch.coeff !== undefined && patch.coeff_count === undefined)
         s.coeff_count = coeff.length;
+    // Accept valid historical overhead values, but always use fixed 1.5x capacity.
+    session_number(s.memory_overuse, 'memory overhead', 0, 1);
     const shape = {
         edit_code: session_boolean(s.edit_code), editor_width: session_number(s.editor_width, 'editor width', 0, 100000),
         resolution: require_resolution(s.resolution), reset: session_boolean(s.reset), dimensions: require_dimensions(s.dimensions),
-        memory_overuse: session_number(s.memory_overuse, 'memory overhead', 0, 1), iso: session_number(s.iso, 'isovalue'),
+        memory_overuse: 0.5, iso: session_number(s.iso, 'isovalue'),
         parameters: legacy_numbers(s.parameters), interpolate: session_boolean(s.interpolate),
         max_coeff_count: session_number(s.max_coeff_count, 'maximum coefficient count', 1, 32), coeff_count: session_number(s.coeff_count, 'coefficient count', 0, 32), coeff
     };

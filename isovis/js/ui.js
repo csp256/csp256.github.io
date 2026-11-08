@@ -124,6 +124,7 @@ function destroy_gui(gui) {
     gui.destroy();
 }
 function build_left_gui() {
+    const menu_closed = typeof left_gui !== 'undefined' && left_gui.closed;
     const width = typeof left_gui === 'undefined' ? 245 : gui_resize_width.get(left_gui) ?? left_gui.width;
     if (typeof left_gui == 'undefined') {
         // Default state.
@@ -141,8 +142,19 @@ function build_left_gui() {
     gui_folder(left_gui, 'Camera').closed = closed_state.Camera;
     material_folder(left_gui);
     gui_folder(left_gui, 'Material').closed = closed_state.Material;
-    left_gui.__closeButton.style.position = 'fixed';
-    left_gui.__closeButton.style.left = '-10000px';
+    left_gui.closed = menu_closed;
+    const gui = left_gui, button = gui.__closeButton;
+    button.tabIndex = 0;
+    button.setAttribute('role', 'button');
+    button.setAttribute('aria-expanded', String(!gui.closed));
+    button.addEventListener('click', () => button.setAttribute('aria-expanded', String(!gui.closed)));
+    button.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            event.stopPropagation();
+            button.click();
+        }
+    });
     install_gui_resize(left_gui, 'left', width);
 }
 function update_coeff() {
@@ -187,7 +199,6 @@ function shape_folder(g) {
     var folder = g.addFolder('Shape');
     validated_number_control(folder, shape_params, 'resolution', require_resolution, set_size_dirty, true, [2, 65, 1]);
     folder.add(shape_params, 'reset').name('Abort').onChange(reset_worker10);
-    folder.add(shape_params, 'memory_overuse').min(0).max(1).step(0.01);
     folder.add(shape_params, 'interpolate').onChange(set_mesh_dirty);
     folder.add(shape_params, 'iso').onChange(set_mesh_dirty);
     folder.add(shape_params, 'dimensions').min(3).max(32).step(1).onFinishChange(dimensions_changed);
