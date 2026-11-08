@@ -50,7 +50,7 @@ async function share_session() {
     try {
         const link = await make_session_link(capture_session(), location.href);
         const local = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
-        const accept = await session_dialog('Share scene', 'This link contains readable settings and submitted JavaScript, not an encrypted or private upload. Anyone with it can read the scene.' +
+        const accept = await session_dialog('Share scene', 'This link contains readable settings and submitted JavaScript, not an encrypted or private upload. Anyone with it can read the scene. Opening the link immediately runs its field code.' +
             (local ? ' This is a local-server address: recipients must run IsoVis locally on the same port and path.' : ''), link, 'Copy link');
         if (!accept)
             return;
@@ -77,10 +77,8 @@ async function offer_shared_session() {
         const session = await read_session_link(location.hash);
         if (generation !== session_link_generation)
             return;
-        const summary = `${session.shape.dimensions} dimensions, resolution ${session.shape.resolution}, ${session.transform.stack.length} transforms.\n\n`;
-        const accepted = await session_dialog('Load shared scene?', 'This will replace the current scene and run JavaScript in workers. Only load code you trust: it can use the network and consume CPU/memory. Cancel leaves the current scene unchanged.', summary + (session.field_source ?? default_field_body()), 'Load and run');
-        if (accepted && generation === session_link_generation)
-            import_settings(session_json(session));
+        // Visiting a shared link directly loads its validated settings and field.
+        import_settings(session_json(session));
     }
     catch (error) {
         if (generation === session_link_generation)

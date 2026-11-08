@@ -256,7 +256,7 @@ function start_autosave() {
     remember_autosave_scene();
     const copies = list_recovery_copies();
     autosave_status(autosave_storage_failed ? 'Autosave unavailable: storage blocked or full. Use Export.' : copies.length ? 'Local recovery available' : 'Autosave ready · local only', autosave_storage_failed);
-    // Explicit shared links take priority. Opening/canceling a link never consumes recovery.
+    // Explicit shared links take priority. Loading a link never consumes recovery.
     if (copies.length && !location.hash.startsWith('#session='))
         open_recovery();
 }
