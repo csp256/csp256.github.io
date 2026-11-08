@@ -54,9 +54,19 @@ function update_coords_function(n, s) {
         a += 'coords[c_index+' + i + ']=c1[' + i + ']*points[p_index]+yz_translation[' + i + '];\n';
     return a + '}}}';
 }
+// Supply zero for unset supported slots without changing c.length, iteration,
+// or the original array. This private fallback array leaves Array.prototype
+// untouched and avoids a Proxy/getter in the per-location hot loop.
+const zero_coefficient_defaults = new Array(32).fill(0);
+for (let k = 0; k < 32; k++)
+    Object.defineProperty(zero_coefficient_defaults, k, { enumerable: false });
 function compile_field(source) {
     const compiled = new Function('x', 'c', source);
-    return (x, c) => { compiled(x, c); };
+    return (x, c) => {
+        const coefficients = c.slice();
+        Object.setPrototypeOf(coefficients, zero_coefficient_defaults);
+        compiled(x, coefficients);
+    };
 }
 function default_field() { return compile_field(default_field_body()); }
 function update_field_function(data) { if (typeof data.code === 'string')

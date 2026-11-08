@@ -24,9 +24,16 @@ function init_editor() {
         mode: "javascript",
         lineNumbers: true,
         matchBrackets: true,
-        indentWithTabs: true,
+        indentWithTabs: false,
         tabSize: 2,
         indentUnit: 2,
+        extraKeys: {
+            Tab(cm) { if (cm.somethingSelected())
+                cm.indentSelection('add');
+            else
+                cm.execCommand('insertSoftTab'); },
+            'Shift-Tab': 'indentLess',
+        },
         lineWrapping: true,
         viewportMargin: Infinity,
     };
