@@ -4,9 +4,18 @@
 // JavaScript; imported/user-written bodies are never translated or rewritten.
 function default_field_kernel(x, c, size3, n, values) {
     for (let i = 0, j = 0; i < size3; i++, j += n) {
-        const t = Math.sqrt(Math.abs(x[j] * x[j] + x[j + 1] * x[j + 1] - c[0])) - c[1];
-        const u = Math.sqrt(Math.abs(x[j + 2] * x[j + 2] + (n > 3 ? x[j + 3] * x[j + 3] : 0) - c[2])) - c[3];
-        values[i] = t * t + u * u - (n > 4 ? c[4] * Math.sin(c[5] * x[j + 4]) : 0);
+        const a = x[j];
+        const b = x[j + 1];
+        const z = x[j + 2];
+        const w = n > 3 ? x[j + 3] : 0;
+        const radius_ab = Math.sqrt(Math.abs(a * a + b * b - c[0]));
+        const radius_zw = Math.sqrt(Math.abs(z * z + w * w - c[2]));
+        const t = radius_ab - c[1];
+        const u = radius_zw - c[3];
+        const wave = n > 4
+            ? c[4] * Math.sin(c[5] * x[j + 4])
+            : 0;
+        values[i] = t * t + u * u - wave;
     }
 }
 function default_field_body() {
